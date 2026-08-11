@@ -1,0 +1,1048 @@
+A Benchmark for Math Misconceptions: Bridging
+Gaps in Middle School Algebra with
+AI-Supported Instruction
+Nancy Otero, Stefania Druga and Andrew Lan
+*Corresponding author(s). E-mail(s): nancy@kitco.design;
+Contributing authors: st3f@uw.edu; andrewlan@cs.umass.edu;
+Abstract
+This study introduces an evaluation benchmark for middle school algebra to
+be used in artificial intelligence(AI) based educational platforms. The goal is to
+support the design of AI systems that can enhance learners’ conceptual under-
+standing of algebra by taking into account learners’ current level of algebra
+comprehension. The dataset comprises of 55 algebra misconceptions, common
+errors and 220 diagnostic examples identified in prior peer-reviewed studies. We
+provide an example application using GPT-4, observing a range of precision and
+recall scores depending on the topic and experimental setup reaching 83.9% when
+including educators’ feedback and restricting it by topic. We found that topics
+such as ratios and proportions prove as difficult for GPT-4 as they are for stu-
+dents. GPT-4 turbo was used from March 1st to April 25th, 2024. We included a
+human assessment of GPT-4 results and feedback from five middle school math
+educators on the clarity and occurrence of the misconceptions in the dataset and
+the potential use of AI in conjunction with the dataset. Most educators (80% or
+more) indicated that they encounter these misconceptions among their students,
+suggesting the dataset’s relevance to teaching middle school algebra. Despite var-
+ied familiarity with AI tools, four out of five educators expressed interest in using
+the dataset with AI to diagnose students’ misconceptions or train teachers. The
+results emphasize the importance of topic-constrained testing, the need for mul-
+timodal approaches, and the relevance of human expertise in gaining practical
+insights when using AI for human learning. Our dataset and code can be found
+at: This GitHub repository, and this Hugging Face Model
+Keywords: AI, Misconceptions, Middle School Math, Algebra
+1
+arXiv:2412.03765v1  [cs.HC]  4 Dec 2024
+
+1 Introduction
+Educational disparities in mathematics persist, particularly for low-income and minori-
+tized students. These students face limited access to resources needed for engaging
+and supportive learning environments, as well as difficulties in obtaining effective
+help. [1–3]. Despite efforts to enhance their capacity to provide responsive teaching,
+personalized mathematics pedagogy remains challenging [4–6].
+Education technology, such as computer-assisted instruction, adaptive tutors, and
+massive open online courses (MOOCs), has been viewed as a potential solution to
+bridge the math achievement gap. However, these technologies often perpetuate exist-
+ing disparities, with high-income white students reaping more benefits from accessing
+technology enhanced math-instruction [7]. Research on the National Assessment of
+Educational Progress (NAEP) data from 1996 to 2011 reveals that low-income, non-
+white children predominantly engaged with technology for repetitive math tasks, while
+affluent white children used it for more advanced exercises on graphs and problem-
+solving [8]. These persistent socio-economic disparities are widening learning gaps in
+mathematics education.
+Teachers’ understanding of how learners develop mathematical knowledge is crucial
+for helping low-income and minoritized students understand more advanced topics [9],
+prior research has shown that addressing math misconceptions has improved learners
+performance and engagement [10–12]. Recognizing that learners’math misconceptions
+are constructive attempts in their process of sense-making allows teachers to leverage
+students’errors as learning tools to enhance understanding [11]. However, accurately
+measuring student math misconceptions remains challenging despite their predictive
+value for student learning outcomes [9].
+AI enhanced math-instruction is already being implemented in classrooms with
+the intention to better serve students across various socio-economic backgrounds [13].
+But such systems should be capable of adapting to different levels of math conceptual
+understanding, aiming to provide more equitable access to quality math education
+[14]. Large Language Models (LLMs) have shown promise in generate diverse educa-
+tional materials [15] including learning objectives, worked examples [16, 17], teaching
+questions, and complete course content [18–23]. A growing body of research demon-
+strates the potential for LLMs to enhance learning outcomes in areas such as teacher
+coaching [24–26], student support [27, 28], and content development [29, 30]. In math
+education LLMs have generated and adapted math problems at various difficulty levels
+with the goal of enhancing student understanding [31, 32].
+Large math datasets with students’ interactions exist such as CIMA from [33] or
+MathDial from [34] but they are created from synthetic sources. Responses with lower
+pedagogical quality have result from the use of such datasets [35, 36]. Our work uses
+real interactions between math learning researchers and real students. Additionally,
+in this study we have included math educators feedback on our dataset for future
+improvement.
+Our aim is to support algebra educators in better identifying misconceptions and
+errors (MAEs) in the classroom. This focus is particularly important given that passing
+6th-grade math is a strong predictor of high school graduation [37]. The primary
+2
+
+research question addressed in this study is: How can AI solutions help educators
+identify students’ misconceptions? We propose a three-part solution:
+1. The creation of a comprehensive algebra misconception benchmark for 4rd-8th
+grade
+2. An evaluation of LLMs’ accuracy in diagnosing each of the 55 misconception using
+the examples of the misconceptions from our dataset.
+3. Algebra educators’ feedback on the benchmark’s potential use and on the bench-
+mark’s evaluation results.
+Our study bridges math misconception research with AI-driven educational tools
+by creating a comprehensive algebra misconceptions dataset. We evaluate LLMs’
+ability to diagnose these misconceptions, achieving 83.91% accuracy in detecting
+misconceptions from question/answer pairs. Our results highlight the complexity of
+proportional reasoning and areas for improvement in LLM performance. Notably, 80%
+of surveyed teachers found our examples clear, recognized these misconceptions in
+their classrooms, and expressed interest in using the dataset for diagnosis. This work
+provides a valuable resource for researchers, technologist and educators aiming to
+improve math learning outcomes and suggests that LLMs can become a valuable tool
+in supporting math education.
+This dataset aims to bridge the gap between math learning research and the prac-
+tical needs of educators, particularly for low-income and minoritized learners. Future
+research can explore the benchmark’s effectiveness in real educational contexts or
+using other LLMs and prompting methodologies. Its applications for AI-driven edu-
+cational tools can include adapting interactions to learners’ specific misconceptions,
+informing teachers about classroom learning gaps, matching misconceptions with the
+understanding needed to overcome them, and supporting curriculum development that
+proactively addresses known difficult areas in math.
+2 Related Work
+2.1 Common Errors and Algebra Misconceptions in Middle
+School
+Teachers’ understanding of how learners develop mathematical knowledge is crucial for
+helping low-income and minoritized students understand more advanced topics [38].
+This understanding is particularly important because mistakes and misconceptions,
+far from being mere obstacles, are important learning opportunities [39]. Recognizing
+that learners’ math misconceptions are constructive attempts in their process of sense-
+making allows teachers to leverage students’ errors as powerful learning tools [40].
+This approach not only facilitates meaningful student learning and retention [41–45]
+but also improves learners’ performance and engagement [40, 46, 47]. In the context of
+math education, scaffolding based on closing knowledge gaps has been shown to be a
+highly effective instructional approach, with meta-analyses reporting significant effect
+sizes on student outcomes [48, 49]. Effective remediation involves educators engaging
+deeply with mathematical details in student responses, including errors, which not
+only enhances understanding but also fosters strong teacher-student relationships,
+3
+
+boosting student motivation [6, 50–58]. Despite the clear benefits and predictive value
+of addressing misconceptions for student learning outcomes, accurately measuring and
+responding to these misconceptions in real-time remains a significant challenge in
+educational research and practice, particularly for novice teachers who struggle to
+identify misconceptions and common errors (MaEs) [38]. Our work looks to create
+a list of researched MaEs to facilitate their recognition in the classroom and to be
+incorporated into math learning platforms.
+Comprehensive
+lists
+of
+misconceptions
+exist
+for
+some
+subjects,
+such
+as
+the Misconception-Oriented Standards-based Assessment Resources for Teachers
+(MOSART) [59] for science. MOSART supports science educators in knowing the
+science misconceptions present in their classrooms, when educators know their stu-
+dents misconceptions is easier for them to use the decades in research on how to
+overcome those misconception [60, 61]. A comparable resource for mathematics is lack-
+ing. Closing this gap is fundamental for leveraging research on both detecting and
+overcoming math misconceptions. Educators need to understand the specific miscon-
+ceptions present in their classrooms to effectively apply practices in overcoming math
+misconceptions. Some efforts have been made to compile math misconceptions, such
+as Ashlock’s (2010) [11] work on arithmetic and Bush’s (2011) [62] research on pre-
+algebra. However, a comprehensive list that can be used for assessment and integrated
+with Large Language Models (LLMs) is still needed.
+2.2 AI and Math Instruction
+The integration of artificial intelligence (AI) into mathematics education has been
+rapidly evolving. Digital math learning platforms, used by millions of students daily,
+have shown positive results. Computer-based tutors that detect student errors and pro-
+vide immediate feedback have demonstrated increased student success [63–65]. These
+technologies are now candidates for AI integration, particularly through Large Lan-
+guage Models (LLMs). LLMs have shown significant potential in math education, with
+classroom implementations already occurring [13]. They enhance automated scoring
+of math questions, achieving human-like agreement in some cases [15, 16, 19, 24, 66].
+LLMs generate diverse educational materials, including learning objectives, worked
+examples [16, 17], teaching questions, course content [18–23], and adapted math prob-
+lems at various difficulty levels [31, 32]. Research demonstrates their potential to
+improve learning outcomes through teacher coaching [24–26], student support [27, 28],
+and potentially doubling learning outcomes in AI-assisted tutoring [67]. LLMs have
+shown promise in math content generation [29, 30], including automated distractor and
+feedback generation for multiple-choice questions [68]. They’ve outperformed existing
+approaches in algebra error classification [69]. However, LLMs still struggle to identify
+specific math misconceptions [70, 71], generate answers demonstrating misconceptions
+[70], or explain incorrect answers. with new research on automating misconception
+identification in student explanations showing potential [27]. There’s a need for these
+systems to adapt to different levels of math understanding for equitable education
+access [14]. Large math datasets with student interactions, like CIMA [33] and Math-
+Dial [34], are crucial for training AI systems. However, synthetic datasets can result
+in lower pedagogical quality responses [35, 36]. The Bridges dataset [67], with 700 real
+4
+
+math tutoring conversations, shows potential for embedding expert thought processes
+in LLMs, improving responses by 76% when used with GPT-4. Our work aims to con-
+tribute datasets of real interactions between math learning researchers and students,
+incorporating math educators’ feedback when used to enhance for future improve-
+ments. This addresses the need for more authentic and pedagogically robust AI used
+data in mathematics education.
+3 Method
+We developed a dataset comprising 55 distinct algebra misconceptions and common
+errors (MaEs), each accompanied by four diagnostic examples, resulting in a total
+of 220 examples. The dataset was created using a snowball sampling method [72],
+analyzing 145 peer-reviewed journal manuscripts, conference proceedings and papers,
+books, and dissertations. The misconceptions are characterized by dimensions such as
+algebra topic and description of the misconception. The topics covered are based on
+[73], [74], [75] categorization [62, 76, 77] and include algebra-related MaEs observed
+during 4th or 5th grade, as these can impact students’ understanding of middle school
+algebra.
+Our dataset is specifically structured to be compatible with Large Language Models
+(LLMs), enabling them to recognize patterns in student errors across various algebra
+topics and match student responses to known misconceptions more accurately. We
+focus on algebra as it is a critical prerequisite for success in high school, postsecondary
+education, and STEM careers [78, 79].
+To evaluate this benchmark’s characteristics and applications, we conducted a
+two-part study:
+1. LLM Performance Evaluation: We measure GPT4-turbo1 ability to identify
+misconceptions using our benchmark with two standard metrics [80] precision (how
+many of the misconceptions identified by the LLM were correct) and recall (LLM’s
+ability to find all relevant instances of the misconception).
+2. Educator Feedback: We invited feedback from algebra middle school educators
+on the LLM’s errors to understand where and why the model might be strug-
+gling. We also surveyed these educators on the clarity of the misconceptions in our
+benchmark and how often they encounter these misconceptions in their classrooms.
+3.1 Dataset Creation
+The dataset creation process began with a comprehensive search on Google Scholar for
+peer-reviewed conference papers and journal articles on algebra misconceptions. We
+then followed references and citations from these initial sources to expand our research
+collection. For each unique MaE identified in the literature, we searched for examples
+of how researchers diagnosed the misconception, aiming to collect four math problems
+with incorrect answers for each MaE. This approach ensured multiple ways to diagnose
+each misconception and confirmed that other researchers had identified the same MaE.
+We analyzed a total of 145 sources, with 56% of the research being conducted in the
+1Accessed from March 1st to April 25th, 2024.
+5
+
+US. When we found more than four examples for a MaE, we prioritized those from
+research with diverse and underserved populations. The scope of our research was
+considered complete when we could no longer find at least four examples to diagnose
+a newly discovered MaE, or when the MaE was too general to diagnose using only
+one question and answer. Within pre-algebra and algebra instruction, we address two
+different learning processes: misconceptions and errors. Errors are defined as learners’
+computational errors indicating that they have not mastered using a rule. Overcoming
+math errors is crucial because they can persist for years, affecting the learner’s ability
+to build more complex math skills [8]. For instance, Bush (2011) [62] found that
+16.5% of middle school learners made basic computational errors with whole numbers
+when answering algebra questions. An example of a computational error is consistently
+making the sum of two negatives a positive, such as -6 – 3 = 9 or -5 – 4 = 9 [11], or
+when students struggle with plotting points, reversing the x- and y- coordinates [62].
+The reasons why students make computational errors can be multifaceted, including a
+lack of understanding of the rule, a misconception about the rule, an underdeveloped
+understanding of a particular underlying concept, an error while learning the rule, or
+a mistake in applying the rule [11]. On the other hand, misconceptions are mistakes in
+conceptual understanding that can affect all applications of an individual concept [81].
+For example, a single misconception about proportional relationships (part/whole,
+part/part, whole/part) can lead to problems in identifying proportions in fraction
+figures and the failure to realize that all parts must be of equal size [82]. Thus, the
+denominator of the fraction is associated with the total number of parts regardless
+of their size. This misunderstanding can then extend to more advanced concepts,
+such as the slope of a function. The slope represents the rate of change between two
+variables and is fundamentally a type of proportional relationship, a ratio. If a learner
+struggles with basic proportional reasoning, they may have difficulty grasping that
+slope represents how much the y-value changes for each unit change in the x-value,
+making understanding linear functions challenging [82].
+The misconceptions in the dataset are organized according to the following topics,
+as outlined by Welder:
+1. Number sense: A good intuition about numbers and their relationships [83].
+(MaE01 - MaE05)
+2. Number operations: The ability to subtract integers, represent and explain frac-
+tions and fraction operations, decimal representations, prime numbers, and the
+order of operations [74]. (MaE06 - MaE22)
+3. Ratios and proportional thinking: The ability to reason proportionally, to
+understand ratio concepts, and to use ratio reasoning to solve problems [84].
+(MaE23 - MaE28)
+4. Properties of numbers and operations: Understanding of the commutative,
+associative, and distributive properties; being capable of performing algebraic
+manipulations and understanding the order of operations [62]. (MaE31 - MaE34)
+5. Patterns, relationships, and functions: The ability to represent, analyze, and
+generalize a variety of patterns with tables, graphs, words, and symbolic rules [62].
+(MaE35 - MaE42)
+6
+
+6. Algebraic representations: Relating and comparing different forms of represen-
+tation for a relationship, exploring relationships between symbolic expressions and
+graphs, using symbolic algebra to represent situations, generating equivalent forms
+for algebraic expressions, and solving linear equations [62]. (MaE43 - MaE44)
+7. Variables, expressions, and operations: The ability to see structure in
+expressions, perform arithmetic with polynomials and rational expressions, create
+equations, and reason with equations and inequalities [62]. (MaE45 - MaE48)
+8. Equations and inequalities: Create equations, and reason with equations and
+inequalities, understand the connections between proportional relationships, lines,
+and linear equations, define, evaluate, and compare functions and use them to
+model relationships between quantities [62]. (MaE49 - MaE55)
+To enhance the dataset’s utility and consistency, we implemented several key for-
+matting decisions. The correct answer to each question was included to provide a
+baseline for LLM knowledge. In some instances, we reformatted questions and answers
+from their original form to ensure a more homogeneous presentation across differ-
+ent examples of each MaE. Additionally, we removed researchers’ explanations from
+the students’ answers to prevent this feature from influencing the accuracy and recall
+experiments.
+4 LLM Experiments
+We employed a repeated random subsampling validation approach to evaluate the per-
+formance of the gpt4-turbo model [85] in predicting misconceptions and to investigate
+the relationships between misconceptions’ examples. In each iteration, one example
+out of the four per MaE was randomly selected as the training set, and another exam-
+ple per MaE was randomly selected to form the test set. The model was trained using
+in-context learning on the training set (see Fig. 1) and evaluated on the test set (see
+Fig. 2); we chose in-context learning since this method was previously used to evaluate
+LLMs performance in tasks related to algebra misconceptions in educational settings
+[70].
+The prompt for the experiments was as follows Prompt: ”You are an expert
+tutor on middle school math with years of experience understanding students’ most
+common math mistakes. You have identified a set of common mistakes called Mis-
+conceptions, and you use them to diagnose student’s answers to math questions. You
+have also developed a labeled dataset of question items, and diagnosed them with the
+appropriate misconception id. Using the set of misconceptions and the labeled dataset,
+your task today is to take some items of unlabeled data and provide a diagnosis for
+each unlabeled item.
+Here is the list of misconceptions together with a brief description: description
+Here is dataset of question items already labeled with a diagnosis: {train example}
+Here is the unlabeled dataset of question items. For each question item below, give a
+diagnosis. {items test}”
+See Appendix for the complete prompt used.
+This process was repeated for 100 iterations to ensure the robustness and general-
+izability of the results. As we used gpt4-turbo, our experiments used only text. When
+7
+
+an image was part of the question or answer, we included the description of each
+image (see Appendix A.1). The gpt4-turbo predicted misconception using as training
+an example of a misconception and the actual misconceptions were recorded on each
+iteration.
+This approach allowed us to investigate the potential for multiple misconcep-
+tions to match a single wrong student’s answer and provides practical insights on the
+use of each example as diagnostic tools. A student’s incorrect response may result
+from multiple underlying misconceptions in real-world scenarios. By examining the
+model’s predictions across different iterations and comparing them to the actual mis-
+conceptions, we can gain insights into the relationships between examples and the
+co-occurrence of misconceptions. These insights can be valuable in designing targeted
+interventions to address specific misconceptions.
+The results from all iterations were combined and analyzed to calculate precision
+and recall metrics at both the example and misconception levels. In addition, we
+examined the frequency of predicted and actual misconceptions for each example and
+the co-occurrence of misconceptions within the same example. This analysis provides
+a more nuanced understanding of the model’s performance and sheds light on the
+complex relationships between examples and misconceptions.
+Fig. 1 Example of a training set
+8
+
+Fig. 2 Example of a test set
+The second experiment was similar to the first. However, the examples for the
+testing dataset were randomly selected from a list of examples belonging to the same
+topic as the training MaE (e.g., Number sense, Equations, and inequalities). As in
+the first experiment, when an image was part of the question or answer, we included
+the description of each image. The process was also repeated 100 times. Precision and
+recall were calculated as in Experiment 1 (Fig. 3).
+5 Structure Interview and Survey
+We conducted an online survey with five teachers and four from those five teachers
+participated on an online structure-interview [86]. The goal was to gather feedback
+from algebra middle school educators that server low-income and minoritize students
+on the clarity and occurrence of the misconceptions in our dataset and the potential
+use of AI in conjunction with the dataset. The survey consisted of three sections:
+1. This section provides information about teachers’ experiences, such as their years
+of teaching, the grade levels they teach or have taught, and their familiarity with
+algebra misconceptions.
+2. This section included questions regarding the clarity of examples of misconceptions
+and their occurrence in the classroom. Eight misconceptions with one example were
+randomly selected from each topic on the data set. Educators were asked to rate
+the clarity of each of the eight misconception descriptions and examples provided
+and indicate if they have encountered these misconceptions in their classrooms.
+3. This section included questions about their current use of AI and the potential use
+of the dataset with AI in teaching practice.
+We sought out educators who work with students from underrepresented groups
+and underserved communities. Five educators with 4 to 10+ years of teaching expe-
+rience in grades 6 through 10 at public schools participated in our survey. Four of
+these educators currently teach in schools serving underserved populations, including
+one who works in a youth correctional facility. We do not have information about the
+9
+
+teaching context of the fifth educator. Regarding the clarity and occurrence of the mis-
+conceptions presented, most educators (80 % or more) indicated that they encounter
+these misconceptions among their students. Four of the five educators explained dur-
+ing the interview that they have not seen misconceptions on some topics because they
+do not teach that topic in their grade. This high level of agreement suggests that the
+misconceptions included in our dataset are indeed prevalent and relevant to teaching
+middle school algebra.
+In terms of familiarity with AI tools, three out of five educators reported being
+unfamiliar with educational AI tools, while one was somewhat familiar and one was
+very familiar. Despite this varied familiarity, four out of five educators expressed inter-
+est in using the dataset with AI tools to diagnose students’ misconceptions or train
+teachers about misconceptions. One educator suggested using the dataset for a chatbot
+or an online test, while another mentioned using it for a diagnostic test.
+We structured the interview to focused on these questions:
+1. Which other misconceptions do you see often in your classroom?
+2. How can we improve our misconception’s examples?
+3. Would you be interested in using out dataset in your classroom? If so, how would
+you like to use our dataset in your classroom?
+4. How can AI support the use of our dataset in your classroom?
+For the first question, one teacher expressed the need to include misconceptions
+from other topics, such as geometry, three teachers mentioned misconceptions that
+are part of the dataset but were not shown in the online survey, and one teacher
+mentioned a new misconception we did not find in our search. Two teachers mentioned
+that the misconception about reversing the x- and y-coordinates was common some
+years ago in their classroom but is no longer expected since students use platforms
+such as Minecraft and Scratch.
+For the second question, all teachers recommended improvements to the format
+of the misconception examples. We anticipated this feedback due to limitations of
+our survey platform, which did not allow for clear and standardized presentation of
+mathematical expressions. Three teachers found the same two answers out of the
+eight misconception examples ”not very clear.” In both examples, we removed the
+researcher’s comments on the student’s answer because having those comments made
+the LLM identify the correct MaE more easily. Teachers’ comments suggest that we
+can improve out dataset by including educators’ feedback.
+All four teachers wanted to use our dataset to diagnose misconceptions. Three
+teachers mentioned they would like to read it to learn more about students’ miscon-
+ceptions. One teacher said it was very interesting that our answers showed students’
+processes because most of the time, she could only see the wrong answer through an
+online platform and did not know the students’ processes.
+During the last question, the four teachers wanted to use AI to help them diagnose
+the misconceptions. Three wanted a test that could use AI to find misconceptions;
+one preferred a chatbot that could ask students about their math thinking process.
+Another teacher answered: ”The use of AI to teach mathematics to children is a
+good option, but I believe that before using it, children should know about the basic
+10
+
+mistakes they make while attempting mathematics problems... Children have to be
+made to understand that success is achieved only by repeated efforts, and we learn
+from mistakes. We have to make children understand how to learn from mistakes.”
+This comment suggests a possible use of the dataset as part of a process where students
+learn from theirs or others mistakes which is an application aligned with the intention
+for creating the dataset.
+6 Results
+The results of the two experiments demonstrate the model’s performance in predicting
+misconceptions using the dataset. In the first experiment, where testing examples were
+randomly selected from the entire dataset, the model achieved a precision of 0.526
+and a recall of 0.529 per MaE. In the second experiment, where testing examples were
+randomly selected within each topic, the model achieved a higher precision of 0.753
+and a recall of 0.748 per MaE (see Fig. 3).
+Fig. 3 Results for precision and recall per MaE
+Fig. 4 Results for precision and recall per MaE per topic
+11
+
+Fig. 5 Scores by Experiment and Topic
+The table presenting the results of experiments per topic provides a more granular
+view of the model’s performance. The precision and recall scores vary considerably
+across topics; in Experiment 1, where testing examples were randomly selected from
+the entire dataset, the model achieved the highest precision (0.685) and recall (0.77) for
+the ”Number operations” topic, indicating its proficiency in identifying misconceptions
+related to this area. Conversely, the model struggled the most with the ”Ratios and
+proportional thinking” topic, yielding the lowest precision (0.215) and recall (0.191)
+scores (see Fig. 5).
+In Experiment 2, where testing examples were randomly selected within each topic,
+the model’s performance improved across all topics, with the most significant gains
+observed in the ”Algebraic representations” topic, achieving perfect precision and
+recall scores of 1. However, even with topic-constrained testing, the model still exhib-
+ited relatively lower performance in the ”Ratios and proportional thinking” topic, with
+precision and recall scores of 0.286 and 0.333, respectively (Fig. 5).
+These results underscore the inherent complexity of proportional reasoning, a skill
+that develops over time and often proves challenging for students to grasp [87], and
+the need for further research to accurately improve the model’s ability to identify
+misconceptions in this area.
+The confusion matrix (CM) presented in figure 18 provides a detailed view of
+the target versus predicted MaEs in experiment 1. This confusion matrix displays
+the model’s performance in predicting 55 distinct algebra misconceptions and errors
+(MaEs). The x-axis represents the predicted MaEs, while the y-axis shows the target
+(actual) MaEs. Darker shades indicate higher frequencies of predictions. The diagonal
+12
+
+elements represent correct predictions, while off-diagonal elements show misclassifica-
+tions. Notable patterns include stronger performance in certain MaEs (e.g., MaE05
+and MaE20) and consistent misclassifications between specific pairs (e.g., MaE07 and
+MaE11, MaE44 and MaE49). The matrix reveals hierarchical relationships between
+misconceptions, such as those from Patterns, Relationships, and Functions (PRF)
+being classified as Ratios and Proportions (RP), but not vice versa. This visualization
+helps identify areas where the model excels and where it struggles, providing insights
+for targeted improvements in misconception identification.
+We also explored the hierarchical structure of misconceptions to understand how
+one misconception might lead to another. This understanding can guide educators and
+online platforms in addressing learners’ mathematical errors (MaEs) more effectively
+once identified. It can also help anticipate which MaEs to address before teaching a
+particular topic. By gaining insights into these relationships between misconceptions,
+educators can develop more targeted strategies for addressing students’ knowledge
+gaps and prevent new misconceptions from forming due to existing ones. To investigate
+these relationships, we conducted further analysis of the Large Language Models’
+(LLMs) mistakes.
+There are notable off-diagonal elements, suggesting that the model struggles to
+distinguish between specific pairs of MaEs. For instance, the matrix shows a relatively
+high frequency of misclassification between MaE07: ”when students simplify just one of
+the terms in a fraction, either the numerator or the denominator” and MaE11: ”when
+students subtract mixed numbers incorrectly, avoiding regrouping and just subtracting
+the smaller from the larger number” and between MaE44: ”when students struggle to
+grasp the concept of independent and dependent variables” and MaE49: ”when students
+find it challenging to comprehend the various meanings and applications of variables”,
+indicating that the model often confuses these specific misconceptions.
+To further investigate the model’s performance, we reviewed the MaEs that were
+incorrectly classified. We noticed that in some of them, besides the MaE diagnosed
+by researchers, more than one MaE could be detected with the researcher’s example.
+We then invited two experienced algebra educators, that did not participate in our
+structured interview, to review the MaE labeling errors made by the model. Through
+our analysis and the discussion with the algebra teachers, we classified the errors into
+the following categories:
+1. Agreed with AI
+(a) Because more than one of the MaEs could be matched to that example
+(Appendix A.3 Figures 13 & 14)
+(b) A MaE is a subset of another MaE (Appendix A.3 Fig. 15)
+2. Picture needed for correct classification. The question asked to educators was: Will
+they identify the correct MaE by only reading the picture description, like the
+LLM? (Appendix A.3 Fig. 16)
+3. The AI indeed makes a mistake (Appendix A.3 Fig. 17)
+13
+
+Fig. 6 Results of Actual vs Predicted
+The two expert educators agreed on 90.91% of their answers. A session that
+included both educators was held to re-rate the pair of MaEs they disagreed upon
+until just one pair disagreed.
+The table presents the expert analysis results on the incorrectly labeled MaEs
+by the AI model in both Experiment 1 and Experiment 2. In Experiment 1, where
+all examples were considered, there were 5,500 iterations. The AI model correctly
+labeled 2,913 (52.96%) of the iterations and incorrectly labeled 2,587 (47.04%). Out
+of the incorrectly labeled iterations, the experts determined that in 1,487 (27.04%)
+cases, the AI was mistaken, while in 687 (12.49%) cases, the experts agreed with the
+AI’s labeling. In 284 (5.16%) cases, the experts concluded that a picture was needed
+for correct classification. Including the incorrect labeled pairs that experts labeled as
+correct, the AI model correctly labeled 65.45% of the MaEs.
+In Experiment 2, where the examples were grouped by topic, there were 1,100 iter-
+ations. The AI model correctly labeled 812 (73.82%) of the iterations and incorrectly
+labeled 288 (26.18%). Among the incorrectly labeled iterations, the experts found that
+in 121 (11.00%) cases, the AI was mistaken, while in 111 (10.09%) cases, the experts
+agreed with the AI’s labeling. In 56 (5.09%) cases, the experts determined that a
+picture was necessary for accurate classification. Including the incorrect labeled pairs
+that experts labeled as correct, the AI model correctly labeled 83.91% of the MaEs.
+7 Discussion
+This study addresses how AI solutions can help educators identify students’ misconcep-
+tions in algebra through the development and evaluation of a benchmark. Our research
+demonstrates that LLMs, specifically gpt4-turbo, can effectively identify student mis-
+conceptions with up to 83.9% accuracy when constrained by topic and incorporating
+14
+
+educator feedback. The benchmark, comprising 55 misconceptions and 220 diagnos-
+tic examples, is a bridge between research and classroom practice. Educator feedback
+validates the benchmark’s relevance, with 80% of surveyed teachers confirming its
+clarity and possible applicability. The study highlights both the potential and limita-
+tions of AI in this domain, particularly in areas like ratios and proportional thinking.
+These findings suggest that AI-driven tools, when used in conjunction with educators
+expertise, could enhance educators’ ability to recognize student misconceptions.
+7.1 Educator Insights: Validation and Refinement
+Educators’ survey response (80 % or more) indicated that they encounter these miscon-
+ceptions among their students suggest that the dataset contains misconceptions that
+are representative to those in classrooms. The structure interviews provided insights
+into the relevance and potential application of the datset. Teachers’ responses high-
+lighted the need to expand the dataset to include misconceptions from other math
+domains such as geometry. The fact that one teacher mentioned a new misconception
+not found in the research emphasizes the value of incorporating educators’ expertise
+in the dataset creation. The importance of the collaboration with teachers was also
+present in the feedback regarding educators’ expected clarity in the answers of the mis-
+conception’s examples. Teachers’ feedback on the presentation of the dataset makes it
+clear that its formatting needs to be carefully designed to maximize its usefulness for
+educators.
+Another important insight is the impact of technology such as Minecraft on stu-
+dents’ understanding and the need for research to stay-up-to-date with the learning
+landscape. This highlights the influence of the environment in learning. A limitation of
+our study is the lack of comprehensive demographic data in the source research, which
+can compromise its applicability. Because we aim to use this dataset to serve students
+in educational settings with low math scores, we attempt to overcome the limitation
+by receiving feedback from educators serving that population. Further feedback from
+educators is needed, as well as bringing the benchmark’s applications to be evaluated
+by students in contexts of low math achievement.
+7.2 Topic-Specific Training Boosts LLM Accuracy
+The CM (Figures 18 & 5) and the varying performance of the model across differ-
+ent topics highlight another critical aspect of the challenge in accurately identifying
+misconceptions: the fact that the MaEs in the dataset are at different levels of abstrac-
+tion. Errors and misconceptions are related but differ in meaningful ways that can
+affect the LLM’s classification accuracy, and even between the levels of misconceptions
+and errors, superset and subset were found. To better understand the relationships
+between MaEs, we propose further research in visualizing how understanding more
+complex MaEs depends on grasping more basic ones. For example, to understand a
+function’s rate of change, a learner might first need to comprehend absolute vs. rela-
+tive proportionalities, which in turn requires understanding the relationship between
+two quantities. (See Appendix A.4 for additional examples.) This hierarchical analysis
+15
+
+can help prioritize which misconceptions to address first, potentially enabling learners
+to overcome multiple related misconceptions more efficiently.
+Both experiments’ precision and recall scores demonstrate the model’s overall effec-
+tiveness in identifying misconceptions using the MaE dataset. In Experiment 1, where
+testing examples were randomly selected from the entire dataset, the model achieved
+a precision of 0.526 and a recall of 0.529 per MaE. The model’s ability to correctly
+identify misconceptions in more than half of the cases, despite the diverse range of
+MaEs and the complexity of the relationships between them, highlights its potential
+for supporting educators in diagnosing students’ misconceptions. When we include the
+feedback from the two expert educators in relabeling the AI model incorrect matched
+to correct matches the accuracy goes up to 65.45% for experiment 1.
+The higher performance of the model in the second experiment, where testing
+examples were randomly selected within each topic, suggests that incorporating topic-
+specific information during model training and evaluation could lead to improved
+accuracy in identifying misconceptions. When we include the feedback from the two
+expert educators in relabeling the AI model incorrect matched to correct matches
+the accuracy goes up to 83.91% for experiment 2. This finding might support the
+theory that the model is more capable of matching patterns than understanding the
+misconception classification task. An application of this finding is that by leveraging
+the vast body of research on math misconceptions and organizing it by topic, AI models
+can better support educators in diagnosing students’ misconceptions and providing
+targeted interventions.
+Additionally, future research should explore the optimal balance between topic-
+specificity and generalizability. This will ensure that the model can effectively identify
+misconceptions across various topics while benefiting from the increased accuracy pro-
+vided by topic-constrained testing. Developing AI models that can better capture the
+underlying concepts and relationships between misconceptions, rather than relying
+solely on pattern matching, and training the model on a more extensive and diverse
+dataset that includes labeled students’ wrong answers could be potential avenues for
+improvement.
+A limitation of this study is the exclusive use of gpt4-turbo. Future research should
+use a multimodal approach to address the need for further exploration of visual repre-
+sentations in misconception identification and include other models. This paper focuses
+exclusively on the examples of misconceptions and their match to a particular MaE
+from the dataset. In further studies, we will address the recommendation component.
+A potential approach to enhance the model’s performance, particularly in complex
+topics like ratios and proportional thinking, is to provide the model with more comput-
+ing capacity and employ techniques such as chain-of-thought prompting [88]. We may
+observe improved performance by allowing the model to explain its reasoning before
+making a decision. For example, the model could be instructed to reverse engineer a
+student’s thought process to arrive at an error and then provide the MaE prediction
+based on that reasoning. This approach might enable the model to capture better the
+nuances and underlying concepts that lead to specific misconceptions, thereby improv-
+ing its overall performance. Future research should explore the effectiveness of such
+techniques in enhancing the model’s abilities.
+16
+
+7.3 Potential Applications
+Our analysis can determine the potential misconceptions per topic, which can be useful
+to educators who can prepare to address them when teaching. The human expert
+review process further highlighted the complexity of misconceptions, as evidenced by
+the different types of errors identified. This complexity poses challenges for AI models
+and educators in accurately identifying and addressing misconceptions. Educators,
+particularly those with high student-to-teacher ratios or diverse classrooms, may only
+observe students’ errors without understanding the underlying misconceptions -as an
+educator mention during the interview- as many misconceptions can lead to the same
+incorrect answer. Educators’ lack of insights into learners’ thinking processes connects
+with educators’ suggestion of using the dataset in conjunction with AI as a diagnostic
+tool during our survey.
+Another application is that the dataset developed in this study can be used to
+create distractor options in multiple-choice questions [89, 90]. By designing ques-
+tions targeting specific misconceptions and analyzing students’ responses, educators
+can gain insights into the prevalent misconceptions in their classrooms and tailor
+their instruction accordingly, even when direct student-teacher interaction is limited.
+This approach demonstrates the potential for collaboration between AI researchers
+and domain experts in identifying areas for improvement and providing insights into
+the nature of misconceptions. These findings have applications for designing teach-
+ing methodologies that detect students’ misconceptions, prepare teachers for detecting
+them, predict which possible misconceptions can be related to an algebra topic, and
+give AI tools and parameters to improve their misconception matching.
+8 Conclusion
+Our initial exploration give promising results towards the possibility to build prac-
+tical tools in the near term to understand better where learners are in constructing
+mathematical thinking. Even though from a small sample, the unanimous inter-
+viewed educators’ interest in using the dataset to diagnose misconceptions and learn
+more about student’s mathematical thinking highlights the potential impact of this
+research on educational practices. Educators’ feedback underscores the importance of
+developing AI tools that can provide insights into learners’ math misconceptions.
+In conclusion, the results emphasize the importance of topic-constrained test-
+ing, the complexity of misconceptions, the need for multimodal approaches -as many
+questions and answers require graph and pictures, and the challenges in accurately
+identifying misconceptions using AI models. As we are working towards a dataset of
+research-based recommendations to overcome the MaEs, we hope our current dataset
+can support educators and AI platforms in meeting learners where they are with what
+they need to be successful in learning algebra.
+References
+[1] Welner, K.G., Carter, P.L.: Achievement gaps arise from opportunity gaps. Clos-
+ing the opportunity gap: What America must do to give every child an even
+17
+
+chance 1(10) (2013)
+[2] Ryan, A.M., Patrick, H.: The classroom social environment and changes in ado-
+lescents’ motivation and engagement during middle school. American educational
+research journal 38(2), 437–460 (2001)
+[3] Puustinen, M.: Help-seeking behavior in a problem-solving situation: Develop-
+ment of self-regulation. European Journal of Psychology of education 13, 271–282
+(1998)
+[4] Dyer, E.B., Sherin, M.G.: Instructional reasoning about interpretations of student
+thinking that supports responsive teaching in secondary mathematics. Zdm 48,
+69–82 (2016)
+[5] Hiebert, J., Morris, A.K., Berk, D., Jansen, A.: Preparing teachers to learn from
+teaching. Journal of teacher education 58(1), 47–61 (2007)
+[6] Loewenberg Ball, D., Forzani, F.M.: The work of teaching and the challenge for
+teacher education. Journal of teacher education 60(5), 497–511 (2009)
+[7] Reich, J., Buttimer, C.J., Fang, A., Hillaire, G., Hirsch, K., Larke, L.R.,
+Littenberg-Tobias, J., Moussapour, R.M., Napier, A., Thompson, M., et al.:
+Remote learning guidance from state education agencies during the covid-19
+pandemic: A first look (2020)
+[8] Wenglinsky, H.: Does it compute? the relationship between educational technol-
+ogy and student achievement in mathematics. (1998)
+[9] Hill, H.C., Chin, M.: Connections between teachers’ knowledge of students,
+instruction, and achievement outcomes. American Educational Research Journal
+55(5), 1076–1112 (2018)
+[10] Parwati, N., Suharta, I.: Effectiveness of the implementation of cognitive conflict
+strategy assisted by e-service learning to reduce students’ mathematical mis-
+conceptions. International Journal of Emerging Technologies in Learning (iJET)
+15(11), 102–118 (2020)
+[11] Ashlock, R.B.: Error Patterns in Computation: Using Error Patterns to Help
+Each Student Learn, 10 edn. Allyn & Bacon, Boston (2010)
+[12] Li, Y., Schoenfeld, A.H.: Problematizing teaching and learning mathematics as
+”given” in STEM education. Springer (2019)
+[13] International
+Maths
+Challenge:
+Best
+AI
+Sites
+for
+School
+Students
+to
+Improve
+Their
+Maths
+Skills.
+Accessed:
+10-
+10-24
+(2023).
+https://international-maths-challenge.com/
+best-ai-sites-for-school-students-to-improve-their-maths-skills/
+18
+
+[14] Levinson, M., Geron, T., Brighouse, H.: Conceptions of educational equity. AERA
+Open 8, 23328584221121344 (2022)
+[15] Sridhar, P., Doyle, A., Agarwal, A., Bogart, C., Savelka, J., Sakr, M.: Harnessing
+llms in curricular design: Using gpt-4 to support authoring of learning objectives.
+arXiv preprint arXiv:2306.17459 (2023)
+[16] Jury, B., Lorusso, A., Leinonen, J., Denny, P., Luxton-Reilly, A.: Evaluating
+llm-generated worked examples in an introductory programming course. In: Pro-
+ceedings of the 26th Australasian Computing Education Conference, pp. 77–86
+(2024)
+[17] Prihar, E., Lee, M., Hopman, M., Kalai, A.T., Vempala, S., Wang, A., Wickline,
+G., Murray, A., Heffernan, N.: Comparing different approaches to generat-
+ing mathematics explanations using large language models. In: International
+Conference on Artificial Intelligence in Education, pp. 290–295 (2023). Springer
+[18] Rodriguez-Torrealba, R., Garcia-Lopez, E., Garcia-Cabot, A.: End-to-end gener-
+ation of multiple-choice questions using text-to-text transfer transformer models.
+Expert Systems with Applications 208, 118258 (2022)
+[19] Elkins, S., Kochmar, E., Serban, I., Cheung, J.C.: How useful are educational
+questions generated by large language models? In: International Conference on
+Artificial Intelligence in Education, pp. 536–542 (2023). Springer
+[20] Wang, Z., Valdez, J., Basu Mallick, D., Baraniuk, R.G.: Towards human-like
+educational question generation with large language models. In: International
+Conference on Artificial Intelligence in Education, pp. 153–166 (2022). Springer
+[21] Shimmei, M., Bier, N., Matsuda, N.: Machine-generated questions attract instruc-
+tors when acquainted with learning objectives. In: International Conference on
+Artificial Intelligence in Education, pp. 3–15 (2023). Springer
+[22] Bulathwela, S., Muse, H., Yilmaz, E.: Scalable educational question genera-
+tion with pre-trained language models. In: International Conference on Artificial
+Intelligence in Education, pp. 327–339 (2023). Springer
+[23] Doughty, J., Wan, Z., Bompelli, A., Qayum, J., Wang, T., Zhang, J., Zheng, Y.,
+Doyle, A., Sridhar, P., Agarwal, A., et al.: A comparative study of ai-generated
+(gpt-4) and human-crafted mcqs in programming education. In: Proceedings of
+the 26th Australasian Computing Education Conference, pp. 114–123 (2024)
+[24] Pardos, Z.A., Bhandari, S.: Learning gain differences between chatgpt and human
+tutor generated algebra hints. arXiv preprint arXiv:2302.06871 (2023)
+[25] Schmucker, R., Xia, M., Azaria, A., Mitchell, T.: Ruffle & riley: Towards
+the automated induction of conversational tutoring systems. arXiv preprint
+19
+
+arXiv:2310.01420 (2023)
+[26] Wang, R.E., Demszky, D.: Is chatgpt a good teacher coach? measuring zero-
+shot performance for scoring and providing actionable insights on classroom
+instruction. arXiv preprint arXiv:2306.03090 (2023)
+[27] Dai, W., Lin, J., Jin, H., Li, T., Tsai, Y.-S., Gaˇsevi´c, D., Chen, G.: Can large
+language models provide feedback to students? a case study on chatgpt. In: 2023
+IEEE International Conference on Advanced Learning Technologies (ICALT), pp.
+323–325 (2023). IEEE
+[28] Xu, S., Zhang, X.: Leveraging generative artificial intelligence to simulate student
+learning behavior. arXiv preprint arXiv:2310.19206 (2023)
+[29] Park, S., Kulkarni, C.: Thinking assistants: Llm-based conversational assis-
+tants that help users think by asking rather than answering. arXiv preprint
+arXiv:2312.06024 (2023)
+[30] Xiao, C., Ma, W., Xu, S.X., Zhang, K., Wang, Y., Fu, Q.: From automation to
+augmentation: Large language models elevating essay scoring landscape. arXiv
+preprint arXiv:2401.06431 (2024)
+[31] Jiao, Y., Shridhar, K., Cui, P., Zhou, W., Sachan, M.: Automatic educational
+question generation with difficulty level controls. In: International Conference on
+Artificial Intelligence in Education, pp. 476–488 (2023). Springer
+[32] Norberg, K., Almoubayyed, H., Fancsali, S.E., De Ley, L., Weldon, K., Murphy,
+A., Ritter, S.: Rewriting math word problems with large language models. Grantee
+Submission (2023)
+[33] Stasaski, K., Yang, G.H., Hearst, M.A.: More diverse dialogue datasets via
+diversity-informed data collection. In: Proceedings of the 58th Annual Meeting
+of the Association for Computational Linguistics, pp. 4958–4968 (2020)
+[34] Macina, J., Daheim, N., Chowdhury, S.P., Sinha, T., Kapur, M., Gurevych, I.,
+Sachan, M.: Mathdial: A dialogue tutoring dataset with rich pedagogical prop-
+erties grounded in math reasoning problems. arXiv preprint arXiv:2305.14536
+(2023)
+[35] Markel, J.M., Opferman, S.G., Landay, J.A., Piech, C.: Gpteach: Interactive ta
+training with gpt-based students. In: Proceedings of the Tenth Acm Conference
+on Learning@ Scale, pp. 226–236 (2023)
+[36] Tack, A., Piech, C.: The ai teacher test: Measuring the pedagogical ability of
+blender and gpt-3 in educational dialogues. arXiv preprint arXiv:2205.07540
+(2022)
+20
+
+[37] Balfanz, R., Herzog, L., Mac Iver, D.J.: Preventing student disengagement and
+keeping students on the graduation path in urban middle-grades schools: Early
+identification and effective interventions. Educational Psychologist 42(4), 223–235
+(2007)
+[38] Settles, B., T. LaFlair, G., Hagiwara, M.: Machine learning–driven language
+assessment. Transactions of the Association for computational Linguistics 8,
+247–263 (2020)
+[39] Boaler, J.: Ability and mathematics: The mindset revolution that is reshaping
+education. In: Forum (2013)
+[40] Moore, S., Nguyen, H.A., Bier, N., Domadia, T., Stamper, J.: Assessing the
+quality of student-generated short answer questions using gpt-3. In: European
+Conference on Technology Enhanced Learning, pp. 243–257 (2022). Springer
+[41] Stefanich, G.P., Rokusek, T.: An analysis of computational errors in the use of
+division algorithms by fourth-grade students. School Science and Mathematics
+92(4), 201 (1992)
+[42] Wilcox, S.K., Zielinski, R.S.: Implementing the assessment standards for school
+mathematics: Using the assessment of students’ learning to reshape teaching. The
+Mathematics Teacher 90(3), 223–229 (1997)
+[43] Riccomini, P.J.: Identification and remediation of systematic error patterns in
+subtraction. Learning Disability Quarterly 28(3), 233–242 (2005)
+[44] Stein, W.A.: Modular Forms, a Computational Approach vol. 79. American
+Mathematical Soc., ??? (2007)
+[45] Schnepper, L.C., McCoy, L.P.: Analysis of misconceptions in high school math-
+ematics. Networks: An Online Journal for Teacher Research 15(1), 625–625
+(2013)
+[46] Hocky, G.M., White, A.D.: Natural language processing models that automate
+programming will transform chemistry research and teaching. Digital discovery
+1(2), 79–83 (2022)
+[47] Walsh, J.: Lesson plan generation using natural language processing: Prompting
+best practices with openai’s gpt-3 model. AERA 2022, 2022 (2022)
+[48] Hattie, J.: Visible Learning: A Synthesis of over 800 Meta-analyses Relating to
+Achievement. routledge, ??? (2008)
+[49] Zuo, S., Huang, Q., Qi, C.: The relationship between cognitive activation
+and mathematics achievement: mediating roles of self-efficacy and mathematics
+anxiety. Current Psychology, 1–12 (2024)
+21
+
+[50] Wentzel, K.R.: Student motivation in middle school: The role of perceived
+pedagogical caring. Journal of educational psychology 89(3), 411 (1997)
+[51] Wentzel, K.R.: Does anybody care? conceptualization and measurement within
+the contexts of teacher-student and peer relationships. Educational Psychology
+Review 34(4), 1919–1954 (2022)
+[52] Pianta, R.C., La Paro, K.: Improving early school success. Educational leadership
+60(7), 24–29 (2003)
+[53] Robinson, E., Sutin, A.R., Daly, M., Jones, A.: A systematic review and meta-
+analysis of longitudinal cohort studies comparing mental health before versus
+during the covid-19 pandemic in 2020. Journal of affective disorders 296, 567–576
+(2022)
+[54] Easley, J.A., Zwoyer, R.E.: Teaching by listening-toward a new day in math
+classes. Contemporary Education 47(1), 19 (1975)
+[55] Brown, J.S., Burton, R.R.: Diagnostic models for procedural bugs in basic
+mathematical skills. Cognitive science 2(2), 155–192 (1978)
+[56] Carpenter, T.P., Fennema, E., Franke, M.L., Levi, L., Empson, S.B.: Children’s
+Mathematics: Cognitively Guided Instruction vol. 1. Heinemann Portsmouth, NH,
+??? (1999)
+[57] Carpenter, T.P., Franke, M.L., Levi, L.: Thinking Mathematically. Portsmouth,
+NH: Heinemann, ??? (2003)
+[58] Lester, F.K.: Second Handbook of Research on Mathematics Teaching and Learn-
+ing: A Project of the National Council of Teachers of Mathematics. IAP, ???
+(2007)
+[59] Astrophysics
+Harvard,
+C.,
+Smitsonian:
+Misconception-
+Oriented
+Standards-based
+Assessment
+Resources
+for
+Teach-
+ers
+(MOSART)
+(2024).
+https://pweb.cfa.harvard.edu/research/
+misconception-oriented-standards-based-assessment-resources-teachers-mosart
+Accessed 2024
+[60] Doyle, J., Sonnert, G., Sadler, P.: How professional development program features
+impact the knowledge of science teachers. Professional development in education
+46(2), 195–210 (2020)
+[61] Sadler, P.M., Sonnert, G., Coyle, H.P., Cook-Smith, N., Miller, J.L.: The influ-
+ence of teachers’ knowledge on student learning in middle school physical science
+classrooms. American Educational Research Journal 50(5), 1020–1049 (2013)
+[62] Bush, S.B.: Analyzing Common Algebra-related Misconceptions and Errors of
+22
+
+Middle School Students. University of Louisville, ??? (2011)
+[63] McKendree, J.: Effective feedback content for tutoring complex skills. Human-
+computer interaction 5(4), 381–413 (1990)
+[64] Koedinger, K.R., Aleven, V.: Exploring the assistance dilemma in experiments
+with cognitive tutors. Educational Psychology Review 19, 239–264 (2007)
+[65] Kantack, N., Cohen, N., Bos, N., Lowman, C., Everett, J., Endres, T.: Instruc-
+tive artificial intelligence (ai) for human training, assistance, and explainability.
+In: Artificial Intelligence and Machine Learning for Multi-domain Operations
+Applications IV, vol. 12113, pp. 45–54 (2022). SPIE
+[66] Morris, W., Holmes, L., Choi, J.S., Crossley, S.: Automated scoring of constructed
+response items in math assessment using large language models. International
+Journal of Artificial Intelligence in Education, 1–28 (2024)
+[67] Wang, R., Zhang, Q., Robinson, C., Loeb, S., Demszky, D.: Bridging the novice-
+expert gap via models of decision-making: A case study on remediating math
+mistakes. In: Proceedings of the 2024 Conference of the North American Chapter
+of the Association for Computational Linguistics: Human Language Technologies
+(Volume 1: Long Papers), pp. 2174–2199 (2024)
+[68] Lee, J., Smith, D., Woodhead, S., Lan, A.: Math multiple choice ques-
+tion generation via human-large language model collaboration. arXiv preprint
+arXiv:2405.00864 (2024)
+[69] McNichols, H., Zhang, M., Lan, A.: Algebra error classification with large lan-
+guage models. In: International Conference on Artificial Intelligence in Education,
+pp. 365–376 (2023). Springer
+[70] Liu, N., Sonkar, S., Wang, Z., Woodhead, S., Baraniuk, R.G.: Novice learner and
+expert tutor: Evaluating math reasoning abilities of large language models with
+misconceptions. arXiv preprint arXiv:2310.02439 (2023)
+[71] Gorgun, G., Botelho, A.F.: Enhancing the automatic identification of com-
+mon math misconceptions using natural language processing. In: International
+Conference on Artificial Intelligence in Education, pp. 302–307 (2023). Springer
+[72] Wohlin, C., Kalinowski, M., Felizardo, K.R., Mendes, E.: Successful combina-
+tion of database search and snowballing for identification of primary studies in
+systematic literature studies. Information and Software Technology 147, 106908
+(2022)
+[73] Welder, R.M.: Prerequisite knowledge for the learning of algebra, 1–26 (2006)
+23
+
+[74] Welder, R.M.: Preservice Elementary Teachers’ Mathematical Content Knowl-
+edge of Prerequisite Algebra Concepts. Montana State University, ??? (2007)
+[75] Welder, R.M.: Improving algebra preparation: Implications from research on stu-
+dent misconceptions and difficulties. School science and mathematics 112(4),
+255–264 (2012)
+[76] Bush, S.B., Karp, K.S.: Prerequisite algebra skills and associated misconceptions
+of middle grade students: A review. The Journal of Mathematical Behavior 32(3),
+613–632 (2013)
+[77] Otero, N.: math-misconceptions. GitHub repository (2024). https://github.com/
+creature-ai/math-misconceptions
+[78] Capraro, M., Joffrion, H.: Algebraic equations: Can middle-school students mean-
+ingfully translate from words to mathematical symbols? Reading Psychology 27,
+147–164 (2006) https://doi.org/10.1080/02702710600642467
+[79] Erbas, A.K.: Predicting turkish ninth grade students’ algebra performance. The
+Mathematics Educator 15(1) (2005)
+[80] Sajjadi, M.S., Bachem, O., Lucic, M., Bousquet, O., Gelly, S.: Assessing genera-
+tive models via precision and recall. Advances in neural information processing
+systems 31 (2018)
+[81] Skemp, R.R.: Relational understanding and instrumental understanding. Mathe-
+matics Teaching 77, 20–26 (1976)
+[82] Walle, J., Karp, K., Bay-Williams, J.M., Brass, A., Bentley, B., Ferguson, S.,
+Goff, W., Livy, S., Marshman, M., Martin, D., et al.: Primary and Middle Years
+Mathematics: Teaching Developmentally. Pearson Australia, ??? (2019)
+[83] Howden, H.: Teaching number sense. The Arithmetic Teacher 36(6), 6–11 (1989)
+[84] Ojose, B.: Proportional reasoning and related concepts: Analysis of gaps and
+understandings of middle grade students. Universal Journal of Educational
+Research 3(2), 104–112 (2015)
+[85] Open, A.: Gpt-4 technical report. 2023. URl: https://arxiv. org/pdf/2303.08774.
+pdf (2023)
+[86] Cohen, L., Manion, L., Morrison, K.: Action research. In: Research Methods in
+Education, pp. 440–456. Routledge, ??? (2017)
+[87] Lamon, S.J.: Rational numbers and proportional reasoning: Toward a theoretical
+framework for research. Second handbook of research on mathematics teaching
+and learning 1, 629–667 (2007)
+24
+
+[88] Wei, J., Wang, X., Schuurmans, D., Bosma, M., Xia, F., Chi, E., Le, Q.V., Zhou,
+D., et al.: Chain-of-thought prompting elicits reasoning in large language models.
+Advances in neural information processing systems 35, 24824–24837 (2022)
+[89] Feng, W., Lee, J., McNichols, H., Scarlatos, A., Smith, D., Woodhead, S., Ornelas,
+N.O., Lan, A.: Exploring automated distractor generation for math multiple-
+choice questions via large language models. arXiv preprint arXiv:2404.02124
+(2024)
+[90] McNichols, H., Feng, W., Lee, J., Scarlatos, A., Smith, D., Woodhead, S., Lan, A.:
+Automated distractor and feedback generation for math multiple-choice questions
+via in-context learning. NeurIPS (2023)
+A Appendix
+A.1 Dataset
+For each misconception, the dataset includes: Meta Data
+1. ID
+2. Misconception description
+3. Topic
+4. Four research based examples
+Research-Based Examples per MaE data
+• Four research-based examples, each including:
+• A question
+• An incorrect answer demonstrating the misconception
+• The correct answer
+• When a graph is part of the question or answer the examples include:
+• An example with a description of the graph.
+Fig. 7 Example with a description of the graph
+25
+
+• A link to the image from the paper
+Fig. 8 Example of one image from a paper
+• Reference link to the source paper for each example
+Fig. 9 One example for MaE28
+26
+
+Fig. 10 Dataset with one example. MaEs 1-24
+27
+
+Fig. 11 Dataset with one example. MaEs 25-40
+28
+
+Fig. 12 Dataset with one example. MaEs 41-55
+29
+
+A.2 Prompt
+The prompt for the experiments was as follows
+Prompt:
+You are an expert tutor on middle school math with years of experience under-
+standing students’ most common math mistakes. You have identified a set of common
+mistakes called Misconceptions, and you use them to diagnose student’s answers to
+math questions. You have also developed a labeled dataset of question items, and diag-
+nosed them with the appropriate misconception id. Using the set of misconceptions
+and the labeled dataset, your task today is to take some items of unlabeled data and
+provide a diagnosis for each unlabeled item.
+Here is the list of misconceptions together with a brief description: description
+Here is dataset of question items already labeled with a diagnosis: {train example}
+Here is the unlabeled dataset of question items. For each question item below, give
+a diagnosis. {items test}
+FOR EACH UNLABELED ITEM, OUTPUT A LINE WITH THE FOLLOWING
+FORMAT: UNLABELED ITEM $N DIAGNOSIS: MaE ID
+DO NOT INCLUDE ANY ADDITIONAL OUTPUT.
+30
+
+A.3 Tables with examples of MaEs
+Fig. 13 Example of experts agreeing with AI mistaken label per topic
+31
+
+Fig. 14 Example of experts agreeing with AI mistaken label in different topics
+32
+
+Fig. 15 Examples of a MaE being a subset or superset of another MaE
+33
+
+Fig. 16 An example of a MaE that contains a picture
+34
+
+Fig. 17 An example of a MaE where AI was mistaken
+35
+
+A.4 Example of relationship between misconceptions
+Fig. 18 Confusion Matrix (CM)
+The CM reveals patterns in the model’s performance: MaEs from Patterns, relation-
+ships, and functions (PRF) can be classified as Ratios and proportions (RP) MaEs,
+36
+
+but not vice versa. An explanation can be that RP does not contain concepts from
+PRF, but PRF does. Expert educators agreed that is possible given that MaEs 38 and
+42 are about functions’ rate of change and MaE 23 is ”When students confuse fixed
+scaling (absolute) with ratio comparisons (relative) in a proportional relationship,” .
+See details on this example in Appendix A.4. Applying this pattern shows the MaEs
+that are needed to solve problems for other MaEs.
+Expert educators agreed that is possible given that MaEs 38 and 42 are about
+functions’ rate of change and MaE 23 is ”When students confuse fixed scaling (absolute)
+with ratio comparisons (relative) in a proportional relationship,” MaE 23 example-4:
+Question: Consider two marigolds that were 8 inches and 12 inches tall two weeks
+ago and 11 inches and 15 tall inches now. Write a ratio to represent the growth of each
+one and tell: Which plant grew more? Answer: Each plant grew the same, 3 inches
+Correct Answer: The shorter plant grew 3/8 of its original height, while the larger
+plant grew less, just 3/12 of its original height.
+Furthermore, by following that logic, the CM shows an additional level of possible
+misunderstanding now connected with MaE 23, MaE 28 ”when students fail to see
+ratios as relationships between two quantities”, MaE 28 example-4:
+Question: Eric has 12 cups of lemonade that tastes exactly the same as Brody’s (3
+cups of water for 2 cups of lemon juice). He needs a larger amount of lemonade. He
+pours one more cup of water and one more cup of lemon juice. Does his lemonade still
+taste the same? Why or why not? Answer: Yes, because he added the same amount
+of both ingredients Correct Answer: His lemonade will not taste the same anymore,
+because he did not add the water and lemon in the same proportions.
+37

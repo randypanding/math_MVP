@@ -1,0 +1,1376 @@
+LLM-based Cognitive Models of Students with Misconceptions
+Shashank Sonkar
+Rice University
+ss164@rice.edu
+Xinghe Chen
+Rice University
+xc42@rice.edu
+Naiming Liu
+Rice University
+nl35@rice.edu
+Richard G. Baraniuk
+Rice University
+richb@rice.edu
+Mrinmaya Sachan
+ETH Zurich
+mrinmaya.sachan@inf.ethz.ch
+Abstract
+Accurately modeling student cognition is cru-
+cial for developing effective AI-driven educa-
+tional technologies. A key challenge is creat-
+ing realistic student models that satisfy two
+essential properties: (1) accurately replicat-
+ing specific misconceptions, and (2) correctly
+solving problems where these misconceptions
+are not applicable. This dual requirement re-
+flects the complex nature of student under-
+standing, where misconceptions coexist with
+correct knowledge.
+This paper investigates
+whether Large Language Models (LLMs) can
+be instruction-tuned to meet this dual require-
+ment and effectively simulate student think-
+ing in algebra. We introduce MalAlgoPy, a
+novel Python library that generates datasets
+reflecting authentic student solution patterns
+through a graph-based representation of alge-
+braic problem-solving. Utilizing MalAlgoPy,
+we define and examine Cognitive Student Mod-
+els (CSMs) – LLMs instruction tuned to faith-
+fully emulate realistic student behavior. Our
+findings reveal that LLMs trained on miscon-
+ception examples can efficiently learn to repli-
+cate errors. However, the training diminishes
+the model’s ability to solve problems correctly,
+particularly for problem types where the mis-
+conceptions are not applicable, thus failing to
+satisfy second property of CSMs. We demon-
+strate that by carefully calibrating the ratio of
+correct to misconception examples in the train-
+ing data – sometimes as low as 0.25 – it is pos-
+sible to develop CSMs that satisfy both prop-
+erties. Our insights enhance our understanding
+of AI-based student models and pave the way
+for effective adaptive learning systems.
+1
+Introduction
+The intersection of artificial intelligence (AI) and
+education is ushering in a new era of possibilities
+for how we understand, support, and enhance stu-
+dent learning. At the heart of this transformation
+is the concept of student modeling, which refers to
+the creation of computational representations of stu-
+dents’ knowledge, skills, and misconceptions (Cor-
+bett and Anderson, 1994). Accurate student models
+serve multiple critical functions. They enable adap-
+tive testing, efficiently assessing student knowledge
+by tailoring test items to the student’s demonstrated
+abilities (Desmarais and Baker, 2012). These mod-
+els are integral to Intelligent Tutoring Systems, en-
+abling personalized feedback and adaptive instruc-
+tion (Pardos et al., 2013). Additionally, student
+models aid in training teachers using simulated
+learning environments (Markel et al., 2023).
+A significant challenge in student modeling is
+the accurate representation of misconceptions. Mis-
+conceptions are not random errors; they are sys-
+tematic, persistent, predictable patterns reflecting
+underlying conceptual misunderstandings (Payne
+and Squibb, 1990). For example in Figure 1, when
+solving ax = b(cx + d), a common misconcep-
+tion leads students to incorrectly distribute b to
+only the first term, resulting in ax = bcx + d.
+While general feedback might state, “Your solu-
+tion is incorrect. Please review the steps,” targeted
+feedback addresses the specific misconception: “In
+ax = b(cx + d), b multiplies both terms inside
+the parentheses: ax = b(cx) + b(d) = bcx + bd.”
+Such targeted feedback helps students correct their
+fundamental conceptual misunderstandings.
+Recent advancements in Large Language Mod-
+els (LLMs) offer promising opportunities to en-
+hance student modeling in education. While LLMs
+excel in natural language tasks, their ability to ac-
+curately model student cognition, particularly in
+replicating misconceptions, remains largely unex-
+plored. This gap presents a significant opportunity:
+if LLMs can be trained to accurately simulate stu-
+dent thinking as Cognitive Student Models (CSMs),
+they could revolutionize education through more
+personalized and effective learning experiences.
+To systematically study LLMs’ capacity to
+1
+arXiv:2410.12294v2  [cs.HC]  17 Oct 2024
+
+Type
+Expression
+T1
+Ax = B
+T2
+Ax = B + C
+T3
+Ax = B ∗C
+T4
+Ax + Bx = C
+T5
+Ax + B = C
+T6
+A + Bx = C
+T7
+Ax = Bx + C
+T8
+Ax = B(C ∗D)
+T9
+Ax = B(Cx + D)
+T10
+Ax = B + C ∗D
+T11
+A + Bx + Cx = D
+T12
+Ax = B + C(Dx + E)
+T14
+Ax + B = Cx + D
+T15
+Ax + Bx = C + D
+T16
+Ax = Bx + C + D
+T1
+T15
+T5
+T16
+T3
+T4
+T2
+T8
+T10
+T6
+T12
+T14
+T11
+T7
+T9
+T9: ax=b(cx+d)
+T7: ex=fx+g
+M8 (T9 →T7) ⊂ Em: 
+ax=b(cx+d) → ax=bcx+d
+T7: e=a, f=bc, g=d
+Correct (T9 →T7) ⊂ Ec: 
+ax=b(cx+d) → ax=bcx+bd
+T7: e=a, f=bc, g=bd
+Figure 1: Left: Problem types and corresponding algebraic expressions. Right: MalAlgoPy’s graph-based model of
+algebraic problem-solving. This directed acyclic graph G = (V, EC ∪EM) models cognitively faithful step-by-step
+simplifications as performed by students solving linear equations. V = {T1, . . . , T16} denotes problem types,
+with T1 representing the base case Ax = B. EC ⊂V × V represents correct transformations (grey arrows), while
+EM ⊂V ×V represents misconception transformation (red arrows). The graph topology encodes the solution space,
+with all paths converging to T1. All possible correct reductions are shown as grey arrows, while only one example
+misconception is depicted with red arrows for clarity. For instance, T9 (ax=b(cx+d)) can correctly reduce to T7
+(ex=fx+g) where e = a, f = bc, g = bd (grey arrow), or incorrectly reduce via misconception M8 (distributive law
+applied only to the first term) where g = d (red arrow). This structure enables generation of both correct solutions
+and “malgorithms” that reflect common student solutions.
+model CSMs, we developed MalAlgoPy, a novel
+Python library that represents algebraic equations
+and their solution processes as a directed acyclic
+graph (Figure 1). MalAlgoPy models 16 distinct
+problem types as nodes in the graph, with edges
+representing both correct transformations (grey ar-
+rows) and 20 common misconceptions (red arrows
+- only one shown). These misconceptions were di-
+agnosed as common algebraic errors in secondary
+school students, providing a realistic basis for mod-
+eling student thinking (Sleeman, 1984, 1985; Payne
+and Squibb, 1990). MalAlgoPy handles a broad
+range of linear equations with one variable, includ-
+ing complex forms with parentheses and multiple
+terms. This structure enables the generation of
+diverse, cognitively-grounded datasets capturing
+both correct solution paths and “malgorithms” - so-
+lution paths incorporating common student errors.
+Using MalAlgoPy, we can conduct a comprehen-
+sive study on training LLMs to simulate student
+cognitive processes in algebra.
+First, we formally define a Cognitive Student
+Model (CSM) as follows: A CSM model A satis-
+fies two properties: (1). Given a misconception M
+and problem types where it’s applicable, A accu-
+rately applies the misconception; (2). For problem
+types where M doesn’t apply, A solves problems
+correctly. Both these properties are important for
+CSMs to faithfully represent the nuanced nature
+of student understanding, where misconceptions
+coexist with correct knowledge across different
+problem contexts. The importance of these dual re-
+quirements becomes clear when considering CSMs’
+application in adaptive testing. By accurately repli-
+cating both misconception application and correct
+problem-solving, CSMs enable precise mapping of
+a student’s knowledge boundaries. This nuanced
+representation enables targeted question selection,
+leading to a faster, more accurate assessment of
+student proficiency.
+Our
+experimentation
+process
+begins
+by
+instruction-tuning Llama models (Dubey et al.,
+2024) to create CSMs.
+We train models on
+misconception examples, uncovering intriguing
+dynamics in how LLMs acquire misconceptions
+(Power et al., 2022). While these models learn
+to apply misconceptions accurately with just
+400-800 examples—fewer than the 2000 typically
+required for mastering correct solutions—we
+observe that they only satisfy the first property of
+CSMs. These models exhibit diminished ability to
+solve problems correctly for types where learned
+misconceptions are not applicable, thus failing to
+meet the second property of CSMs.
+To address this limitation and satisfy both prop-
+erties of CSMs, we investigate strategies to balance
+misconception acquisition with preserving correct
+problem-solving abilities. By carefully calibrat-
+2
+
+Misconception
+Expression
+Applicable Types
+Description
+M1
+A(part) →A + (part)
+T8, T9, T10, T12
+Treating distribution as addition
+M2_S3
+A(Bx ± C) →ABx ± C
+T9, T12
+Ignoring distribution
+M3
+A ± B(part) →(A ± B)(part)
+T10, T12
+Misapplying parentheses
+M4
+A(B ∗C) →A ∗B ∗A ∗C
+T8
+Incorrectly distributing multiplication
+M5
+A(Bx ± C) →A(A ∗Bx ± A ∗C)
+T9, T12
+Over-distribution
+M6
+−A(Bx −C) →−A ∗Bx −A ∗C
+T9, T12
+Incorrect sign distribution
+M8
+A(Bx ± C) →Bx ± A ∗C
+T9, T12
+Incorrect distribution on x term
+M11
+Ax ± B = Cx ± D →Ax + Cx = B + D
+T14
+Incorrectly combining terms
+M12/S15
+Ax ± B = (A ± B)x
+T5, T6, T7, T9, T12
+Incorrectly factoring x
+M13
+Ax ± B = (A ± B)
+T5, T6, T7, T9, T12
+Incorrectly factoring x
+M14
+part1 + part2 →part1 −part2
+T2, T4
+Incorrectly swapping addition and subtraction
+M15
+part1 −part2 →part1 + part2
+T2, T4
+Incorrectly swapping addition and subtraction
+M16
+part1 ∗part2 →part1 + part2
+T3, T10
+Treating multiplication as addition
+M17
+A + B →B −A
+T2, T4
+Incorrectly swapping order of addition and subtraction
+M18
+A −B →B −A
+T2, T4
+Incorrectly swapping order of addition and subtraction
+M19
+Ax = B →x = A + B
+All Types
+Treat division as addition
+M20_S20
+Ax = B →x = B
+All Types
+Divide only on one side
+M21
+Ax = B →x = A −B
+All Types
+Treat division as subtraction
+M22_S1
+Ax = B →x = A/B
+All Types
+Incorrect numerator and denominator
+Table 1: Overview of algebraic misconceptions modeled in MalAlgoPy. Each row presents a specific misconception,
+its mathematical expression, the problem types to which it applies, and a brief description of the error.
+ing the training data to include both misconcep-
+tion and correct examples—with ratios of correct
+to misconception examples sometimes as low as
+0.25—we achieve models that meet both require-
+ments of CSMs. This novel training paradigm suc-
+cessfully creates CSMs that faithfully represent
+student understanding.
+Our contributions in this work are foundational
+and pave the way for future research: the devel-
+opment of MalAlgoPy, the introduction of a new
+task of Cognitive Student Modeling, and a focused
+investigation into how LLMs can be instruction-
+tuned to simulate these models.
+2
+Related Work
+Cognitive modeling in mathematics education has
+significantly evolved since its inception.
+The
+groundwork was laid by seminal works such as
+problem space theory (Simon and Newell, 1971)
+and ACT-R theory (Anderson, 2014), which em-
+phasized understanding step-by-step cognitive pro-
+cesses in problem-solving. Early computational ap-
+proaches like BUGGY (Brown and Burton, 1978)
+employed rule-based systems for modeling arith-
+metic errors. This paved the way for sophisticated
+models like the MalRules approach (Payne and
+Squibb, 1990), which focused on modeling alge-
+braic misconceptions using both correct rules and
+“malrules” to capture common student errors. Rep-
+resentation of student misconceptions has also been
+critical in cognitive modeling in mathematics edu-
+cation. Matz, 1982 provided an analysis of system-
+atic errors in algebra, categorizing them into extrap-
+olation, generalization, and repairing errors. The
+application of cognitive models in intelligent tutor-
+ing systems like the Cognitive Tutor (Ritter et al.,
+2007) demonstrates the effectiveness of cognitive
+modeling in providing personalized instruction.
+3
+MalAlgoPy: Framework for Algebraic
+Problem-Solving with Misconceptions
+MalAlgoPy’s architecture is built on three core de-
+sign principles that work together to model alge-
+braic problem-solving and student misconceptions.
+These principles ensure extensibility, modularity,
+and faithful representation of student cognitive pro-
+cesses in mathematical reasoning.
+3.1
+Problem Type Hierarchy
+MalAlgoPy is designed to handle linear equations
+with one variable, including more complex forms
+with parentheses and multiple terms. At its core is
+a type-based problem representation implemented
+as a directed acyclic graph G = (V, E). The set
+V = {T1, T2, . . . , T16} represents a hierarchy of
+problem types, where each Ti ∈V corresponds
+to a specific equation structure. For instance, T9
+represents equations of the form ax = b(cx + d),
+while T7 represents equations of the form ex =
+fx + g. This design has three key advantages (i)
+it enhances code reusability across different equa-
+tion types; (ii) it facilitates the integration of new
+equation types into the existing framework, and
+(iii) it closely mirrors the student cognitive process
+of algebraic simplification.
+The set E = EC ∪EM represents transitions
+between types, where EC denotes correct reduc-
+tions and EM represents misconception-based tran-
+3
+
+Algorithm 1 Reduction Process
+1: function REDUCE(e, Ti)
+2:
+if Ti = T1 then return e
+3:
+end if
+4:
+e′ ←Ri(e)
+5:
+Tj ←type of e′
+6:
+if (Ti, Tk) ∈EM for some Tk
+then
+7:
+Choose between (Ti, Tj) and
+(Ti, Tk)
+8:
+Update e′ and Tj if miscon-
+ception is chosen
+9:
+end if
+10:
+return REDUCE(e′, Tj)
+11: end function
+Algorithm 2 Reduction with Misconceptions
+1: function REDUCEWITHMISCONCEPTIONS(e, Ti, M)
+2:
+if Ti = T1 then return e
+3:
+end if
+4:
+e′ ←Ri(e)
+5:
+Tj ←type of e′
+6:
+for M ∈M do
+7:
+if M(Ti, Tj) ∈EM then
+8:
+(Ti, Tk) ←M(Ti, Tj)
+9:
+e′′ ←apply M to e′
+10:
+return REDUCEWITHMISCONCEPTIONS(e′′, Tk, M)
+11:
+end if
+12:
+end for
+13:
+return REDUCEWITHMISCONCEPTIONS(e′, Tj, M)
+14: end function
+Figure 2: Algorithms for algebraic equation reduction in MalAlgoPy: (left) Basic reduction process that transforms
+equations to simpler forms; (right) Extended reduction process that systematically applies a set of predefined
+misconceptions, generating both correct and incorrect solution paths. M is the set of all applicable misconceptions.
+sitions. Correct reductions, represented by edges in
+EC, are valid transformations that simplify equa-
+tions. For example, an edge (T9, T7) ∈EC repre-
+sents the correct reduction of ax = b(cx + d) to
+ax = bcx + bd, where e = a, f = bc, and g = bd.
+Misconception-based transformations, repre-
+sented by a set of edges in EM, model common stu-
+dent errors in equation transformations. As shown
+in Figure 1, when solving ax = b(cx + d), a com-
+mon misconception (M8) leads students to incor-
+rectly distribute b to only the first term. This er-
+roneous transformation is represented by an edge
+(T9, T7) ∈EM. A misconception can be applied
+to multiple problem types as shown in Table 1. For
+e.g. M8 is applicable to T12: (ax=b+c(dx+e)) as
+well as T9, thus M8 = {(T9, T7), (T12, T15)}.
+3.2
+Single-Step Reduction Process
+MalAlgoPy enforces a strict single-step reduction
+policy, closely mirroring the student cognitive pro-
+cess of step-by-step problem-solving. Each type
+class implements a reduce() method that applies
+a single algebraic transformation, transitioning the
+equation to a less complex type. This granular re-
+duction approach enables: (i) detailed tracking and
+explanation of each solution step; (ii) well-defined
+insertion points for modeling misconceptions; and
+(iii) precise control over the solution process al-
+lowing generation of comprehensive solution trees,
+including both correct and erroneous paths.
+The reduction process leverages the type hierar-
+chy to transform complex equations into progres-
+sively simpler forms. For instance, consider the re-
+duction path of a T9 equation (Ax = B(Cx+D)):
+T9 (ax = b(cx + d)) →T7 (ax = bx + c) →
+T2 (ax = b + c) →T1 (ax = b). Each transition
+represents a specific algebraic operation, such as
+distribution or combining like terms. This process
+continues recursively until reaching the base case
+of T1. The reduction process is formalized as a
+traversal of G, starting from the node representing
+the input equation type and ending at T1. Algo-
+rithms 1 and 2 present the pseudocode for the core
+reduction process and the integration of misconcep-
+tions, respectively.
+3.3
+Decoupled Misconception Modeling
+The third principle of MalAlgoPy is decoupled
+misconception modeling, where misconceptions
+are implemented as alternative edges in the graph,
+representing direct transitions between problem
+types. This approach allows for flexible and exten-
+sible modeling of student errors within the graph-
+based framework. It enables cross-type applicabil-
+ity, where a single misconception can be applied
+across multiple equation types, and combinatorial
+error generation, where the graph structure allows
+for the natural combination of multiple miscon-
+ceptions along a solution path. Additionally, this
+design facilitates easy extensibility, as new miscon-
+ceptions can be added by introducing new edges
+in EM without modifying existing problem-type
+implementations, supporting ongoing research and
+refinement of the error model.
+These three principles enable MalAlgoPy to gen-
+erate a comprehensive representation of student
+problem-solving possibilities. The system can per-
+form an exhaustive search, generating all possible
+combinations of correct steps and misconceptions
+for a given problem. This produces a complete so-
+lution space that captures the diverse ways students
+might approach an algebraic problem.
+4
+
+4
+Cognitive Student Models
+Our study aims to instruct-tune LLMs as CSMs
+which are capable of accurately simulating student
+problem-solving behavior in algebraic equations,
+including both correct solutions and common mis-
+conceptions. We will define the problem space, in-
+troduce evaluation metrics, and then define CSMs
+before outlining our experimental procedure.
+4.1
+Problem Space
+Let A be a cognitive student model, P
+=
+{T1, T2, ..., Tn} be the set of problem types, where
+each Ti represents a specific type of algebraic
+equation as defined in MalAlgoPy.
+Let M =
+{M1, M2, ..., Mm} be the set of misconceptions,
+where each Mj represents a specific algebraic mis-
+conception. We define a function α : M →P(P)
+that maps each misconception to the set of problem
+types to which it is applicable α(M) = {Ti ∈P :
+M is applicable to Ti}.
+4.2
+Evaluation Metrics
+We define the following metrics:
+Misconception Accuracy (MA): Assesses a
+model’s ability to accurately replicate a specific
+misconception for applicable problem types.
+MA(A, M) =
+1
+|α(M)|
+X
+Ti∈α(M)
+MA(A, M, Ti),
+where MA(A, M, Ti) is the accuracy of model A
+in applying misconception M to problem type Ti.
+Correct Accuracy (Applicable) (CAA): As-
+sesses a model’s ability to solve problems correctly
+for problem types where a given misconception is
+applicable.
+CAA(A, M) =
+1
+|α(M)|
+X
+Ti∈α(M)
+CA(A, Ti).
+Correct Accuracy (Non-Applicable) (CANA):
+Assesses a model’s performance on problem types
+not applicable to a given misconception.
+CANA(A, M) =
+1
+|P \ α(M)|
+X
+Ti /∈α(M)
+CA(A, Ti).
+Overall Correct Accuracy (OCA): Assesses a
+model’s overall ability to solve problems correctly
+across all problem types.
+OCA(A) =
+1
+|P|
+X
+Ti∈P
+CA(A, Ti).
+Definition 1 (Cognitive Student Model). A Cogni-
+tive Student Model A accurately replicates miscon-
+ceptions for applicable problem types while main-
+taining the ability to correctly solve non-applicable
+problem types. Thus A satisfies two properties:
+Property 1: Given a misconception M and problem
+types where it’s applicable, A accurately applies
+the misconception:
+MA(A, M) ≥θm,
+Property 2: For problem types where M doesn’t
+apply, A solves problems correctly:
+CANA(A, M) ≥θc
+where θm and θc are sufficiently high thresholds for
+misconception accuracy and correct solving accu-
+racy, respectively (both set to 90.0 in experiments).
+4.3
+Experimental Procedure
+Our experiment focuses on training CSMs, exam-
+ining how they learn to replicate misconceptions
+while maintaining correct problem-solving abili-
+ties. We systematically vary the amount of training
+data for misconceptions and correct examples, eval-
+uating the models’ performance using our defined
+metrics. This process allows us to uncover learning
+dynamics and identify optimal training regimes for
+cognitively faithful student models. The procedure
+consists of the following steps:
+1. Train
+a
+base
+model
+Llama
+(Llama-3.1-8B-Instruct)
+on
+2000
+cor-
+rect examples for each problem type such
+that OCA(A) ≥90.0. This model forms the
+foundation for all our CSM models.
+2. For each misconception Mj,
+train mod-
+els
+A(Mj, nm)
+on
+varying
+amounts
+of
+misconception
+examples
+nm
+∈
+100, 200, 400, 800, 1600, 3200.
+Evaluate
+these models to determine the relationship
+between nm and MA(A, Mj), focusing on
+achieving MA(A, Mj) > 90.0.
+3. Assess the impact of misconception train-
+ing on problem-solving abilities by evaluating
+OCA(A), CAA(A, Mj), and CANA(A, Mj)
+for these models.
+4. To address the limitation of models trained
+solely on misconception examples (which sat-
+isfy property 1 but fail property 2 of CSMs),
+train models A(Mj, nm, nc) by introducing
+correct examples nc alongside misconception
+5
+
+100
+200
+400
+800
+1600
+3200
+0
+20
+40
+60
+80
+100
+M1 (MA)
+M1 (OCA)
+M11 (MA)
+M11 (OCA)
+M12_S15_M13 (MA)
+M12_S15_M13 (OCA)
+M14_M15 (MA)
+M14_M15 (OCA)
+M16 (MA)
+M16 (OCA)
+M17_M18 (MA)
+M17_M18 (OCA)
+M3 (MA)
+M3 (OCA)
+M2_S3 (MA)
+M2_S3 (OCA)
+M6 (MA)
+M6 (OCA)
+M8 (MA)
+M8 (OCA)
+100
+200
+400
+800
+1600
+3200
+0
+20
+40
+60
+80
+100
+M1 (MA)
+M1 (OCA)
+M11 (MA)
+M11 (OCA)
+M12_S15_M13 (MA)
+M12_S15_M13 (OCA)
+M14_M15 (MA)
+M14_M15 (OCA)
+M16 (MA)
+M16 (OCA)
+M17_M18 (MA)
+M17_M18 (OCA)
+M3 (MA)
+M3 (OCA)
+M2_S3 (MA)
+M2_S3 (OCA)
+M6 (MA)
+M6 (OCA)
+M8 (MA)
+M8 (OCA)
+Number of Misconception Training Examples
+Accuracy (%)
+Figure 3: Learning dynamics of misconceptions in Cognitive Student Models (CSMs). Each point represents a
+model trained on a specific number of misconception examples. As misconception training examples increase,
+Misconception Accuracy (MA, solid lines) rises, demonstrating an improved ability to replicate specific miscon-
+ceptions for applicable problem types. Simultaneously, Overall Correct Accuracy (OCA, dashed lines) decreases,
+indicating a decline in the model’s ability to solve problems correctly across all types. Top: Aggregate view of all
+misconceptions, with MA in blue and OCA in red. Bottom: Individual misconception patterns, each in a unique
+color. This inverse relationship between MA and OCA highlights the challenge of simultaneously satisfying both
+properties of CSMs: accurately replicating misconceptions while maintaining correct problem-solving abilities for
+non-applicable types. This inverse relationship between MA and OCA illustrates the challenge of developing CSMs.
+Note that for both plots, the initial point (misconception training examples = 0) represents the base fine-tuned Llama
+model with OCA ≥90.0% and MA < 5.0%, trained on 2000 correct examples per problem type.
+examples nm.
+Vary the ratio nc/nm
+∈
+0.25, 0.5, 1.0 to find the optimal balance for sat-
+isfying both CSM properties.
+5. Analyze the resulting data to determine:
+(a) The
+relationship
+between
+nm
+and
+MA(A, Mj).
+(b) The trade-off between MA(A, Mj) and
+CAA(A, Mj).
+(c) The optimal ratio nc/nm for achiev-
+ing high MA(A, Mj) while maintaining
+CANA(A, Mj) ≥θc for CSMs.
+For the choice of hyperparameters, we used a
+learning rate of 2×10−5 with AdamW (Loshchilov
+and Hutter, 2019), batch size of 16, cosine sched-
+uler, weight decay of 0.05, warmup ratio of 0.1,
+and total of 3 epochs. For each problem type, we
+evaluate accuracy on 500 test samples. This exper-
+imental setup provides a rigorous framework for
+uncovering the scaling laws governing the develop-
+ment of cognitively faithful student models.
+5
+Instruction-tuning LLMs as CSMs
+In this section, we present the results of our ex-
+periments on training Cognitive Student Models
+(CSMs). We examine the learning dynamics of
+these models, focusing on how they acquire mis-
+conceptions (property 1 of CSMs) and the con-
+sequent impact on their ability to solve problems
+correctly for non-applicable types (property 2 of
+CSMs). We then explore LLM training strategies
+to satisfy both properties simultaneously through
+the strategic introduction of correct examples.
+6
+
+100
+200
+400
+800
+1600
+3200
+Number of Misconception Training Examples
+0
+20
+40
+60
+80
+Accuracy (%)
+Correct Accuracy (Applicable - A vs Non - NA) 
+M1 (A)
+M1 (NA)
+M11 (A)
+M11 (NA)
+M12_S15_M13 (A)
+M12_S15_M13 (NA)
+M4 (A)
+M4 (NA)
+M5 (A)
+M5 (NA)
+M8 (A)
+M8 (NA)
+M2_S3 (A)
+M2_S3 (NA)
+S
+100
+200
+400
+800
+1600
+Number of Correct Training Examples
+20
+40
+60
+80
+100
+Accuracy (%)
+MA vs OCA
+M1 (Misconception)
+M1 (Correct)
+M11 (Misconception)
+M11 (Correct)
+M12_S15_M13 (Misconception)
+M12_S15_M13 (Correct)
+M14_M15 (Misconception)
+M14_M15 (Correct)
+M16 (Misconception)
+M16 (Correct)
+M17_M18 (Misconception)
+M17_M18 (Correct)
+Figure 4: Left: Impact of misconception training on correct problem-solving accuracy for CSMs. Solid lines
+represent accuracy for problem types where the misconception is applicable (A), while dashed lines show accuracy
+for non-applicable (NA) types. As the number of misconception training examples increases, accuracy decreases for
+both A and NA problems, with A types generally more affected. This demonstrates the challenge in training CSMs
+that can accurately apply misconceptions while maintaining correct problem-solving abilities for non-applicable
+problem types. Right: Recovery of correct problem-solving abilities with introduction of correct examples. Blue
+lines represent Misconception Accuracy (MA), while red lines show Overall Correct Accuracy (OCA). ‘S’ indicates
+the starting point with only misconception training. The graph demonstrates how increasing the number of correct
+training examples alongside misconception examples enables the model to balance both MA and OCA. The rapid
+improvement in OCA, even with a relatively small number of correct examples, suggests an efficient method for
+training CSMs capable of replicating misconceptions while preserving general problem-solving skills.
+5.1
+Misconception Acquisition in CSMs
+Our
+investigation
+began
+by
+fine-tuning
+the
+Llama-3.1-8B-Instruct model on 2000 correct
+examples for each of the 15 problem types defined
+in MalAlgoPy. Our objective was to achieve an
+Overall Correct Accuracy (OCA) of at least 90%.
+This fine-tuned model forms the foundation for all
+CSM models, ensuring a robust initial capacity for
+correct problem-solving across all problem types
+before the introduction of misconceptions.
+We then proceeded to train and evaluate CSMs
+A(Mj, nm) for each misconception Mj, sys-
+tematically varying the misconception training
+size nm.
+Specifically, we explored nm
+∈
+{100, 200, 400, 800, 1600, 3200}, allowing us to
+observe the full spectrum of learning dynamics
+from initial acquisition to potential saturation ef-
+fects. Our investigation revealed intriguing patterns
+in how these models learn to replicate algebraic
+misconceptions and the consequent effects on their
+problem-solving abilities. Figure 3 provides a
+comprehensive view of these dynamics across all
+misconception types.
+5.1.1
+Misconception Acquisition Dynamics
+Our analysis of Misconception Accuracy (MA)
+across different training sizes revealed intriguing
+patterns in how models acquire misconceptions rel-
+ative to learning correct problem-solving strategies.
+While the base model required 2000 correct exam-
+ples to achieve 90% accuracy in correct problem-
+solving, the number of examples needed to learn
+misconceptions varied dramatically. For many mis-
+conceptions, we observed a characteristic S-shaped
+learning curve. Models often achieved high MA
+(>90%) with an order of magnitude fewer exam-
+ples than required for correct problem-solving. For
+instance, misconceptions like M1 (distributing mul-
+tiplication over parentheses incorrectly) and M11
+(incorrectly combining terms) reached over 90%
+MA with 800 examples, less than half the number
+needed for correct problem-solving.
+5.1.2
+Impact on Problem-Solving Ability
+Our analysis revealed a striking impact of miscon-
+ception training on problem-solving abilities, high-
+lighting the challenge of simultaneously satisfying
+both properties of CSMs. Figure 3 illustrates a
+consistent pattern across most misconceptions: as
+7
+
+the number of training examples increases, Miscon-
+ception Accuracy (MA) rises while Overall Correct
+Accuracy (OCA) falls dramatically. For example,
+with M1, the OCA dropped from 64.1% with 100
+training examples to a mere 19.8% with 3200 ex-
+amples. This inverse relationship between MA and
+OCA underscores a fundamental challenge in cog-
+nitive modeling: as models become more adept at
+replicating specific errors (property 1), they lose
+the ability to solve problems correctly (property 2).
+To better understand this phenomenon, we exam-
+ined the Correct Accuracy for Applicable (CAA)
+and Non-Applicable (CANA) problem types, as
+shown in Figure 7. We observed that as MA in-
+creased, both CAA and CANA decreased, with
+CAA typically showing a more pronounced decline.
+For instance, with misconception M1, we observed
+a significant decline in both CAA and CANA. As
+the number of training examples increased from
+100 to 3200, the CAA dropped dramatically from
+31.1% to 0.2%. We also observed a substantial
+decline in CANA, though less severe, decreasing
+from 64.1% to 19.8% over the same range of train-
+ing examples. This pattern was consistent across
+various misconceptions.
+5.2
+Satisfying both properties in CSMs
+The findings from our initial experiments reveal
+a fundamental challenge in cognitive modeling:
+Is it possible to create a model that satisfies both
+properties of CSMs simultaneously? To address
+this challenge, we trained and evaluated CSMs
+A(Mj, nm, nc) for each misconception Mj. Here,
+nm was fixed at the number of misconception ex-
+amples needed to achieve greater than 90% mis-
+conception accuracy in the initial experiments. We
+then systematically varied the number of correct
+training examples nc, exploring ratios of nc/nm =
+{0.25, 0.5, and 1.0}. This approach allowed us
+to investigate how the introduction of correct ex-
+amples influences the model’s ability to maintain
+misconception accuracy while recovering overall
+correct problem-solving skills.
+5.2.1
+Recovery of Correct Problem-Solving
+Figure 4 illustrates the remarkable recovery of
+overall correct problem-solving abilities in our
+CSMs as we introduced correct training examples.
+For most misconceptions, we observed a sharp
+increase in OCA with the introduction of just a
+small number of correct examples. For instance,
+with M1, OCA increased from 23.15% (with no
+correct examples) to 87.43% with just 100 cor-
+rect examples (nc/nm = 0.25). Similarly, for
+M11 (incorrectly combining terms), OCA rose
+from 26.39% to 88.34% with 200 correct exam-
+ples (nc/nm = 0.25).
+Notably, in many cases, a ratio of nc/nm = 0.25
+was sufficient to restore a high level of OCA, sug-
+gesting an efficient frontier in balancing miscon-
+ception and correct example training. As we in-
+creased this ratio further, we observed diminishing
+returns. For example, for M1, the gain in OCA
+from nc/nm = 0.25 to 1.0 was only about 3 per-
+centage points (from 87.43% to 90.81%). These
+results demonstrate our ability to satisfy Property
+2 of CSMs while maintaining Property 1.
+5.2.2
+Retention of Misconception Accuracy
+Importantly, the introduction of correct examples
+did not significantly impair the model’s ability
+to retain misconceptions. For most misconcep-
+tion types, we saw an insignificant decrease in
+Misconception Accuracy compared to the models
+trained solely on misconception examples. For in-
+stance, M1 maintained an MA above 90% even
+with nc/nm = 1.0. M11 showed remarkably sta-
+ble performance, with MA increasing from 92.97%
+to 98.44% as nc/nm increased from 0.25 to 1.0.
+These findings demonstrate that with the
+strategic introduction of correct samples with
+misconception samples, it is possible to create
+models that satisfy both properties of CSMs.
+6
+Conclusion
+This study makes two significant contributions to
+the field of AI in education: the development of
+MalAlgoPy, a novel library for modeling algebraic
+misconceptions, and the introduction of Cognitive
+Student Models (CSMs). Using MalAlgoPy, we
+demonstrated that LLMs can effectively learn to
+replicate common algebraic misconceptions. How-
+ever, our initial experiments revealed a critical chal-
+lenge: as models became proficient at replicating
+misconceptions, they lost their ability to solve prob-
+lems correctly in other contexts. We addressed
+this issue by strategically introducing correct exam-
+ples alongside misconception training, achieving
+a balance that allows CSMs to both replicate mis-
+conceptions and maintain correct problem-solving
+abilities. These findings have important implica-
+tions for the development of more nuanced and
+effective AI-driven educational technologies.
+8
+
+7
+Limitations
+This study, while providing valuable insights, has
+two main limitations. Firstly, as an initial investi-
+gation, our focus was solely on algebraic problem-
+solving, which limits the generalizability of our
+findings to other mathematical domains or subjects.
+Future research should explore the applicability of
+these models to a broader range of mathematical
+concepts. Secondly, our current implementation of
+MalAlgoPy is optimized for single-variable linear
+equations, which, while covering a significant por-
+tion of elementary algebra, does not include more
+complex algebraic structures such as systems of
+equations or polynomial factorization. Expanding
+the library to encompass these areas could provide
+a more comprehensive understanding of LLMs’
+capabilities in modeling student cognition across
+various levels of algebraic complexity.
+References
+John R Anderson. 2014. Rules of the mind. Psychology
+Press.
+John Seely Brown and Richard R Burton. 1978. Diag-
+nostic models for procedural bugs in basic mathemat-
+ical skills. Cognitive science, 2(2):155–192.
+Albert T Corbett and John R Anderson. 1994. Knowl-
+edge tracing: Modeling the acquisition of procedural
+knowledge. User modeling and user-adapted inter-
+action, 4:253–278.
+Michel C Desmarais and Ryan SJ d Baker. 2012. A re-
+view of recent advances in learner and skill modeling
+in intelligent learning environments. User Modeling
+and User-Adapted Interaction, 22:9–38.
+Abhimanyu Dubey, Abhinav Jauhri, Abhinav Pandey,
+Abhishek Kadian, Ahmad Al-Dahle, Aiesha Letman,
+Akhil Mathur, Alan Schelten, Amy Yang, Angela
+Fan, et al. 2024. The llama 3 herd of models. arXiv
+preprint arXiv:2407.21783.
+Ilya Loshchilov and Frank Hutter. 2019.
+De-
+coupled weight decay regularization.
+Preprint,
+arXiv:1711.05101.
+Julia M Markel, Steven G Opferman, James A Lan-
+day, and Chris Piech. 2023. Gpteach: Interactive ta
+training with gpt-based students. In Proceedings of
+the tenth acm conference on learning@ scale, pages
+226–236.
+Marilyn Matz. 1982. Towards a process model for high
+school algebra errors. In Intelligent tutoring systems,
+pages 25–50. Academic Press, London.
+Zachary Pardos, Yoav Bergner, Daniel Seaton, and
+David Pritchard. 2013. Adapting bayesian knowl-
+edge tracing to a massive open online course in edx.
+In Educational Data Mining 2013. Citeseer.
+Stephen J Payne and Helen R Squibb. 1990. Algebra
+mal-rules and cognitive accounts of error. Cognitive
+science, 14(3):445–481.
+Alethea Power, Yuri Burda, Harri Edwards, Igor
+Babuschkin, and Vedant Misra. 2022.
+Grokking:
+Generalization beyond overfitting on small algorith-
+mic datasets. arXiv preprint arXiv:2201.02177.
+Steven Ritter, John R Anderson, Kenneth R Koedinger,
+and Albert Corbett. 2007. Cognitive tutor: Applied
+research in mathematics education. Psychonomic
+bulletin & review, 14:249–255.
+Herbert A Simon and Allen Newell. 1971.
+Human
+problem solving: The state of the theory in 1970.
+American psychologist, 26(2):145.
+D Sleeman. 1985. Basic algebra revisited: A study with
+14-year-olds. International Journal of Man-Machine
+Studies.
+Derek Sleeman. 1984. An attempt to understand stu-
+dents’ understanding of basic algebra.
+Cognitive
+Science, 8(4):387–412.
+9
+
+A
+Appendix
+A.1
+Misconception Acquisition Variability in CSMs
+Our analysis revealed significant variability in how different misconceptions were acquired by the CSMs,
+as illustrated in Figure 5. We also observed distinct patterns in the relationship between Misconception
+Accuracy (MA) and Overall Correct Accuracy (OCA) as the number of misconception training examples
+increased:
+Rapid Acquisition:
+Some misconceptions, such as M1 (distributing multiplication over parentheses
+incorrectly) and M11 (incorrectly combining terms), showed rapid acquisition. For M1, MA increased
+from 0.81% at 100 examples to 89.65% at 800 examples, while OCA dropped from 53.98% to 23.15%
+over the same range.
+Gradual Acquisition:
+Other misconceptions like M14_M15 demonstrated more gradual learning curves.
+MA for M14_M15 increased steadily from 1.04% at 100 examples to 98.05% at 3200 examples, with
+OCA decreasing from 63.72% to 18.83%.
+Resistant Acquisition:
+Interestingly, some misconceptions proved resistant to acquisition. M4 and M5
+stood out, with M4 reaching only 9.38% MA at 3200 examples, while its OCA dropped from 79.50% to
+18.77%.
+Immediate High Acquisition:
+Certain misconceptions, like M20_S20, showed immediate high acquisi-
+tion, achieving 94.52% MA with just 100 examples, while OCA remained relatively stable, only dropping
+to 24.48% at 800 examples.
+Trade-off between MA and OCA:
+Across most misconceptions, we observed an inverse relationship
+between MA and OCA. As MA increased with more training examples, OCA generally decreased, though
+the rate and extent of this trade-off varied among misconceptions.
+These findings highlight the complex nature of misconception acquisition in CSMs and underscore the
+challenges in simultaneously satisfying both properties of CSMs as discussed in Section 4. The variability
+observed emphasizes the need for careful calibration of misconception and correct examples in training,
+as explored in our subsequent experiments on balancing these properties.
+A.2
+Analysis of MA Retention and OCA Recovery Variability across Misconceptions
+Figure 6 illustrates the effects of introducing correct examples on both Misconception Accuracy (MA) and
+Overall Correct Accuracy (OCA) across various misconceptions. This analysis expands on our findings
+from Section 5, providing a comprehensive view of how CSMs maintain both properties simultaneously.
+Retention of Misconceptions:
+Across most misconceptions, we observed remarkable retention of MA
+(solid lines) even with the introduction of substantial correct examples. For instance, M1 maintained an
+MA above 90% even as the number of correct examples increased to 800. This resilience suggests that
+once acquired, misconceptions remain stable in the model’s knowledge representation.
+Recovery of Correct Problem-Solving:
+Simultaneously, we observed a significant recovery in OCA
+(dashed lines) with the introduction of correct examples. For most misconceptions, OCA shows a sharp
+increase from the initial ‘S’ point, often reaching above 80% with as few as 100-200 correct examples.
+This rapid recovery demonstrates the model’s ability to relearn correct problem-solving strategies without
+compromising acquired misconceptions.
+Variability Across Misconceptions:
+While the general trend of MA retention and OCA recovery is
+consistent, we observed variability in the specific patterns across different misconceptions. For example,
+M4 and M5 show distinctly different behaviors, with lower MA and a more gradual increase in OCA
+compared to other misconceptions.
+These findings provide evidence that it is indeed possible to create CSMs that satisfy both properties
+simultaneously, maintaining high MA while recovering high OCA. The ability to balance these properties
+10
+
+100
+200
+400
+800
+1600
+3200
+0
+20
+40
+60
+80
+100
+M1 (MA)
+M1 (OCA)
+M11 (MA)
+M11 (OCA)
+M12_S15_M13 (MA)
+M12_S15_M13 (OCA)
+M14_M15 (MA)
+M14_M15 (OCA)
+100
+200
+400
+800
+1600
+3200
+0
+20
+40
+60
+80
+100
+M16 (MA)
+M16 (OCA)
+M17_M18 (MA)
+M17_M18 (OCA)
+M19 (MA)
+M19 (OCA)
+M20_S20 (MA)
+M20_S20 (OCA)
+100
+200
+400
+800
+1600
+3200
+0
+20
+40
+60
+80
+100
+M21 (MA)
+M21 (OCA)
+M22_S1 (MA)
+M22_S1 (OCA)
+M2_S3 (MA)
+M2_S3 (OCA)
+M3 (MA)
+M3 (OCA)
+100
+200
+400
+800
+1600
+3200
+0
+20
+40
+60
+80
+M4 (MA)
+M4 (OCA)
+M5 (MA)
+M5 (OCA)
+M6 (MA)
+M6 (OCA)
+M8 (MA)
+M8 (OCA)
+Number of Misconception Training Examples
+Accuracy (%)
+Figure 5: Learning dynamics of misconceptions in Cognitive Student Models (CSMs).Solid lines represent Miscon-
+ception Accuracy (MA), while dashed lines show Overall Correct Accuracy (OCA). As the number of misconception
+training examples increases, MA generally rises while OCA decreases, illustrating the trade-off between acquiring
+misconceptions and maintaining correct problem-solving abilities. The four subplots display results for different sets
+of misconceptions, each represented by a unique color. This visualization demonstrates the variability in acquisition
+patterns across different misconception types and highlights the challenge in developing CSMs that accurately
+replicate specific errors while preserving general problem-solving skills.
+through strategic introduction of correct examples offers a promising approach for developing more
+realistic and nuanced student models.
+A.3
+Misconception-wise Variability in Impact on Applicable and Non-Applicable Problem Types
+Figure 7 illustrates the misconception-specific impact of increasing training examples on Correct Accuracy
+for both Applicable (CAA) and Non-Applicable (CANA) problem types. Starting from initial accuracies
+around 90% for both metrics, we observe significant variability in how different misconceptions affect
+model performance:
+Differential Rates of Decline:
+All misconceptions show a decline in both CAA and CANA, but with
+varying rates. M1 exhibits a precipitous drop in CAA from 31.1% to nearly 0% within 400 examples,
+while its CANA decreases more gradually from 64.1% to 19.8% over 3200 examples. M6 shows a more
+moderate decline, with CAA dropping to around 39.5% and CANA to 58.5% at 3200 examples.
+11
+
+S
+25
+50
+100
+200
+400
+800
+1600 3200
+0
+20
+40
+60
+80
+100
+M1 (MA)
+M1 (OCA)
+M11 (MA)
+M11 (OCA)
+M12_S15_M13 (MA)
+M12_S15_M13 (OCA)
+M14_M15 (MA)
+M14_M15 (OCA)
+M16 (MA)
+M16 (OCA)
+M17_M18 (MA)
+M17_M18 (OCA)
+M19 (MA)
+M19 (OCA)
+M20_S20 (MA)
+M20_S20 (OCA)
+S
+25
+50
+100
+200
+400
+800
+1600 3200
+0
+20
+40
+60
+80
+100
+M21 (MA)
+M21 (OCA)
+M22_S1 (MA)
+M22_S1 (OCA)
+M2_S3 (MA)
+M2_S3 (OCA)
+M3 (MA)
+M3 (OCA)
+M4 (MA)
+M4 (OCA)
+M5 (MA)
+M5 (OCA)
+M6 (MA)
+M6 (OCA)
+M8 (MA)
+M8 (OCA)
+Number of Correct Training Examples
+Accuracy (%)
+Figure 6: Recovery of correct problem-solving abilities with introduction of correct examples. This graph shows
+how adding correct training examples alongside misconception examples helps the model regain correct solving
+accuracy. The rapid improvement suggests an effective method for creating balanced student models that can
+replicate misconceptions while retaining correct problem-solving skills.
+100
+200
+400
+800
+1600
+3200
+0
+20
+40
+60
+80
+M1 (A)
+M1 (NA)
+M11 (A)
+M11 (NA)
+M12_S15_M13 (A)
+M12_S15_M13 (NA)
+M14_M15 (A)
+M14_M15 (NA)
+M16 (A)
+M16 (NA)
+M17_M18 (A)
+M17_M18 (NA)
+100
+200
+400
+800
+1600
+3200
+0
+20
+40
+60
+80
+M2_S3 (A)
+M2_S3 (NA)
+M3 (A)
+M3 (NA)
+M4 (A)
+M4 (NA)
+M5 (A)
+M5 (NA)
+M6 (A)
+M6 (NA)
+M8 (A)
+M8 (NA)
+Number of Misconception Training Examples
+Accuracy (%)
+Figure 7: Impact of misconception learning on problem types applicable (A) and non-applicable (NA) to the
+misconception. Solid lines represent accuracy for types where the misconception is applicable, while dashed lines
+show types where it’s not. The goal is to create a model that exhibits learned misconceptions for A problems while
+maintaining correct solving abilities for NA problems, mimicking real student behavior.
+Varying Gaps Between CAA and CANA:
+The difference between CAA and CANA evolves differently
+across misconceptions. For M12_S15_M13, the gap widens as training progresses, with CAA plummeting
+to near 0% while CANA settles around 55%. In contrast, M14_M15 shows a narrowing gap, with both
+metrics converging around 20% at 3200 examples.
+12
+
+Anomalous Patterns:
+Some misconceptions display unique patterns. M17_M18 maintains relatively
+high CAA (above 85%) for the first 200 examples before rapidly declining, suggesting a threshold effect
+in misconception acquisition. M4 and M5 show less severe degradation in CAA, retaining values around
+3-4% even at 3200 examples.
+Relative Resilience in CANA:
+While both CAA and CANA decline across all misconceptions, CANA
+generally shows less severe degradation. However, this relative resilience varies. M2_S3 maintains CANA
+at 49.7% at 3200 examples (compared to 4.3% for CAA), while M17_M18 sees CANA drop to 13.4%
+(with CAA at 0.8%). It’s important to note that despite this relative resilience, CANA still experiences
+substantial decline from its initial high accuracy.
+This misconception-wise analysis reveals the complex and varied ways in which different miscon-
+ceptions affect model performance. It highlights that while misconception training generally degrades
+performance on both applicable and non-applicable problem types, the extent and pattern of this degra-
+dation vary significantly across misconceptions. This variability underscores the need for nuanced,
+misconception-specific approaches in developing and evaluating Cognitive Student Models.
+13
