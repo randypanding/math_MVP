@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @bottom-center {
+                content: "第 " counter(page) " 页 / 共 " counter(pages) " 页";
+                font-size: 10pt;
+                color: #999;
+            }
+        }
+        body {
+            font-family: "SimSun", "STSong", serif;
+            font-size: 12pt;
+            line-height: 1.8;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20pt;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10pt;
+        }
+        .title {
+            font-size: 18pt;
+            font-weight: bold;
+            margin-bottom: 5pt;
+        }
+        .info {
+            font-size: 10pt;
+            color: #666;
+        }
+        .section {
+            margin-top: 15pt;
+            margin-bottom: 10pt;
+        }
+        .section-title {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 8pt;
+            border-left: 4px solid #333;
+            padding-left: 8pt;
+        }
+        .question {
+            margin-bottom: 8pt;
+            display: flex;
+            align-items: flex-start;
+        }
+        .question-number {
+            font-weight: bold;
+            margin-right: 5pt;
+            min-width: 20pt;
+        }
+        .question-stem {
+            flex: 1;
+        }
+        .question-blank {
+            display: inline-block;
+            min-width: 60pt;
+            border-bottom: 1px solid #333;
+        }
+        .sub-question {
+            margin-left: 25pt;
+            margin-bottom: 5pt;
+        }
+        .footer {
+            margin-top: 30pt;
+            font-size: 9pt;
+            color: #999;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">{{ title }}</div>
+        <div class="info">
+            {% if grade %}年级：{{ grade }}&nbsp;&nbsp;{% endif %}
+            {% if knowledge_points %}知识点：{{ knowledge_points }}&nbsp;&nbsp;{% endif %}
+            题量：{{ total_questions }}题
+            {% if total_score %}&nbsp;&nbsp;满分：{{ total_score }}分{% endif %}
+        </div>
+    </div>
+
+    {% for section in sections %}
+    <div class="section">
+        <div class="section-title">{{ section.title }}（共{{ section.questions|length }}题）</div>
+        {% for q in section.questions %}
+        <div class="question">
+            <span class="question-number">{{ q.number }}.</span>
+            <span class="question-stem">{{ q.stem | safe }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+
+    <div class="footer">
+        数学专题练习卷生成器 | 生成时间：{{ generated_at }}
+    </div>
+</body>
+</html>

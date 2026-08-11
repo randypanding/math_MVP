@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} - 答案</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+            @bottom-center {
+                content: "第 " counter(page) " 页 / 共 " counter(pages) " 页";
+                font-size: 10pt;
+                color: #999;
+            }
+        }
+        body {
+            font-family: "SimSun", "STSong", serif;
+            font-size: 12pt;
+            line-height: 1.8;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20pt;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10pt;
+        }
+        .title {
+            font-size: 18pt;
+            font-weight: bold;
+            margin-bottom: 5pt;
+        }
+        .section {
+            margin-top: 15pt;
+            margin-bottom: 10pt;
+        }
+        .section-title {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 8pt;
+            border-left: 4px solid #333;
+            padding-left: 8pt;
+        }
+        .answer-item {
+            margin-bottom: 10pt;
+            padding: 5pt;
+            border-bottom: 1px dotted #ccc;
+        }
+        .answer-number {
+            font-weight: bold;
+            margin-right: 5pt;
+        }
+        .answer-content {
+            margin-right: 15pt;
+        }
+        .solution {
+            color: #0066cc;
+            font-size: 10pt;
+            margin-left: 25pt;
+        }
+        .error-tip {
+            color: #cc3300;
+            font-size: 10pt;
+            margin-left: 25pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">{{ title }} - 答案与解析</div>
+    </div>
+
+    {% for section in sections %}
+    <div class="section">
+        <div class="section-title">{{ section.title }}</div>
+        {% for q in section.questions %}
+        <div class="answer-item">
+            <span class="answer-number">{{ q.number }}.</span>
+            <span class="answer-content">{{ q.answer }}</span>
+            {% if q.solution %}
+            <div class="solution">解题思路：{{ q.solution }}</div>
+            {% endif %}
+            {% if q.common_error %}
+            <div class="error-tip">易错提示：{{ q.common_error }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</body>
+</html>

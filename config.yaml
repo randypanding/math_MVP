@@ -1,0 +1,49 @@
+# 数学练习卷生成器 - 配置文件
+# API Key 请填入 .env 文件
+
+# LLM 配置
+llm:
+  # 模型类型: openai / tongyi / deepseek / custom
+  provider: deepseek
+  
+  # API 基础 URL
+  # OpenAI: https://api.openai.com/v1
+  # 通义千问: https://dashscope.aliyuncs.com/compatible-mode/v1
+  # DeepSeek: https://api.deepseek.com/v1
+  base_url: https://api.deepseek.com/v1
+  
+  # 模型名称
+  # OpenAI: gpt-4, gpt-3.5-turbo
+  # 通义千问: qwen-turbo, qwen-plus, qwen-max
+  # DeepSeek: deepseek-chat, deepseek-coder
+  model: deepseek-chat
+  
+  # 请求超时（秒）
+  timeout: 60
+  
+  # 温度（0-2，越低越确定）
+  temperature: 0.7
+
+# 数据库配置
+database:
+  path: data/mathgen.db
+
+# PDF 生成配置
+pdf:
+  page_size: A4
+  margin: 2cm
+  font_family: "SimSun, serif"
+  font_size: 12pt
+  line_height: 1.8
+
+# 题目生成配置
+generation:
+  # 默认每知识点生成题目数
+  default_count: 50
+  # 随机种子（可选，用于复现）
+  seed: null
+
+# 日志配置
+logging:
+  level: INFO
+  file: data/mathgen.log
