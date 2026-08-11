@@ -40,6 +40,33 @@ TYPE_NAMES = {
 # 反向映射
 TYPE_NAMES_CN = {v: k for k, v in TYPE_NAMES.items()}
 
+# 年级名称映射（数字/汉字 → 中文年级名）
+GRADE_NAMES = {
+    "一年级", "二年级", "三年级", "四年级", "五年级", "六年级",
+}
+GRADE_MAP = {
+    "1": "一年级", "2": "二年级", "3": "三年级",
+    "4": "四年级", "5": "五年级", "6": "六年级",
+    "一": "一年级", "二": "二年级", "三": "三年级",
+    "四": "四年级", "五": "五年级", "六": "六年级",
+}
+
+
+def normalize_grade(grade) -> str:
+    """将年级输入统一为中文年级名（支持 数字 1-6 / '二' / '二年级' / '2年级'）"""
+    if not grade:
+        return grade
+    g = str(grade).strip()
+    if g in GRADE_MAP:
+        return GRADE_MAP[g]
+    if g in GRADE_NAMES:
+        return g
+    # 兼容 "2年级" 形式
+    if g.endswith("年级") and g[:-2] in GRADE_MAP:
+        return GRADE_MAP[g[:-2]]
+    return g
+
+
 # 默认题型顺序
 DEFAULT_TYPE_ORDER = [
     "oral_counting", "number_read_write", "number_composition",
@@ -163,7 +190,7 @@ def cmd_generate_questions(args):
             print(f"  {kp['name']}: {count} 题")
         print(f"\n共生成 {total} 道题目")
     elif args.grade:
-        kps = load_knowledge_points(grade=args.grade)
+        kps = load_knowledge_points(grade=normalize_grade(args.grade))
         total = 0
         for kp in kps:
             count = generate_for_knowledge_point(kp, args.count, repos["question"])
@@ -187,14 +214,38 @@ def cmd_generate_questions(args):
 
 
 def cmd_query_types(args):
-    """处理 query-types 命令"""
+    """处理 query-types 命令（支持按年级/知识点筛选）"""
     repos = get_repos()
+    kp_repo = repos["kp"]
+    q_repo = repos["question"]
 
-    # 从数据库查询实际存在的题型
-    questions = repos["question"].query(review_status="approved", limit=100000)
+    # 确定要统计的知识点范围
+    kp_ids = None
+    grade = normalize_grade(args.grade) if args.grade else None
+    if grade:
+        kp_ids = [kp.id for kp in kp_repo.get_by_grade(grade)]
+    if args.kp:
+        matched = {kp.id for kp in kp_repo.search_by_name(args.kp)}
+        kp_ids = matched if kp_ids is None else [i for i in kp_ids if i in matched]
+
+    # 查询符合条件的题目
+    questions = []
+    if kp_ids:
+        for kp_id in kp_ids:
+            questions.extend(q_repo.query(
+                knowledge_point_id=kp_id, review_status="approved", limit=100000))
+    else:
+        questions = q_repo.query(review_status="approved", limit=100000)
+
     type_counts = {}
     for q in questions:
         type_counts[q.question_type] = type_counts.get(q.question_type, 0) + 1
+
+    filter_desc = ""
+    if grade:
+        filter_desc += f"（{grade}）"
+    if args.kp:
+        filter_desc += f"（{args.kp}）"
 
     if args.json_output:
         data = []
@@ -203,7 +254,7 @@ def cmd_query_types(args):
             data.append({"type_en": type_en, "type_cn": name_cn, "count": count})
         print(json.dumps(data, ensure_ascii=False, indent=2))
     else:
-        print("\n可用题型列表")
+        print(f"\n可用题型列表{filter_desc}")
         print("=" * 50)
         print(f"{'中文题型':<12} {'英文标识':<25} {'题目数':<8}")
         print("-" * 50)
@@ -239,7 +290,7 @@ def cmd_generate(args):
 
     params = {
         "knowledge_points": [k.strip() for k in args.kp.split(",")] if args.kp else None,
-        "grade": args.grade,
+        "grade": normalize_grade(args.grade),
         "count": args.count,
         "types": types_filter,
         "sections": sections if sections else None,
@@ -332,7 +383,7 @@ def cmd_query(args):
 
     questions = repos["question"].query(
         knowledge_point_id=kp_id,
-        grade=args.grade,
+        grade=normalize_grade(args.grade),
         question_type=query_type,
         difficulty=args.difficulty,
         review_status=args.status,
@@ -439,8 +490,10 @@ def cmd_config(args):
         print(f"API Key: {'已设置' if config.llm_api_key else '未设置'}")
         print(f"数据库路径: {config.db_path}")
     elif args.cfg_command == "set-model":
+        config.set_model(args.model)
         print(f"模型已设置为: {args.model}")
-        print("提示: 请手动修改 config.yaml 中的 llm.model 值")
+        print(f"已写入 {config.config_path}")
     elif args.cfg_command == "set-api-key":
+        config.set_api_key(args.key)
         print("API Key 已设置")
-        print("提示: 请将 Key 填入 .env 文件: LLM_API_KEY=your-key")
+        print("已写入 .env 文件")

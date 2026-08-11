@@ -43,6 +43,42 @@ class Config:
                 return default
         return value
 
+    def set_model(self, model: str):
+        """更新 config.yaml 中的 llm.model 值（保留注释）"""
+        if not os.path.exists(self.config_path):
+            raise FileNotFoundError(f"配置文件不存在: {self.config_path}")
+        import re
+        with open(self.config_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        new_content, n = re.subn(
+            r'^(\s*model:\s*).*$', lambda m: m.group(1) + model, content, flags=re.MULTILINE)
+        if n == 0:
+            # 若不存在 model 键，则追加到 llm 段末尾
+            new_content = content.rstrip() + f"\n  model: {model}\n"
+        with open(self.config_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        self._config = yaml.safe_load(new_content) or {}
+        self._load_env()
+
+    def set_api_key(self, api_key: str):
+        """更新 .env 文件中的 LLM_API_KEY 值"""
+        env_path = Path(self.config_path).parent / ".env"
+        lines = []
+        if env_path.exists():
+            with open(env_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+        updated = False
+        for i, line in enumerate(lines):
+            if line.strip().startswith("LLM_API_KEY="):
+                lines[i] = f"LLM_API_KEY={api_key}\n"
+                updated = True
+                break
+        if not updated:
+            lines.append(f"LLM_API_KEY={api_key}\n")
+        with open(env_path, 'w', encoding='utf-8') as f:
+            f.writelines(lines)
+        os.environ["LLM_API_KEY"] = api_key
+
     @property
     def llm_provider(self) -> str:
         return os.environ.get("LLM_PROVIDER", self.get("llm.provider", "deepseek"))
