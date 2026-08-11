@@ -13,8 +13,20 @@ class PDFRenderer:
         self.font_path = self._find_chinese_font()
 
     def _find_chinese_font(self) -> str:
-        font_dirs = ["C:/Windows/Fonts", "C:/WINNT/Fonts"]
-        chinese_fonts = ["simsun.ttc", "msyh.ttc", "simhei.ttf", "simkai.ttf"]
+        # Windows 字体路径
+        font_dirs = [
+            "C:/Windows/Fonts", "C:/WINNT/Fonts",
+            # Linux 常见中文字体路径
+            "/usr/share/fonts/opentype/noto",
+            "/usr/share/fonts/truetype/wqy",
+            "/usr/share/fonts/truetype/arphic",
+            "/usr/local/share/fonts",
+        ]
+        chinese_fonts = [
+            "simsun.ttc", "msyh.ttc", "simhei.ttf", "simkai.ttf",
+            "NotoSansCJK-Regular.ttc", "NotoSansCJKsc-Regular.otf",
+            "wqy-zenhei.ttc", "wqy-microhei.ttc", "uming.ttc", "ukai.ttc",
+        ]
         for font_dir in font_dirs:
             for font_name in chinese_fonts:
                 font_path = os.path.join(font_dir, font_name)

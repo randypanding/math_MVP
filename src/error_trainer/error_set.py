@@ -61,13 +61,7 @@ def generate_error_practice(repos: dict, count: int = 20,
     if not questions:
         raise ValueError("错题集中没有有效题目")
 
-    # 使用 PaperGenerator 生成PDF
-    from .paper.generator import PaperGenerator
-    gen = PaperGenerator(repos)
-
-    # 这里简化处理，直接调用generate
-    from .paper.pdf_renderer import PDFRenderer
-    renderer = PDFRenderer()
+    # 使用 weasyprint + HTML 模板生成 PDF
 
     # 准备数据
     question_number = 1
@@ -96,7 +90,7 @@ def generate_error_practice(repos: dict, count: int = 20,
         title="错题专项练习",
         grade="",
         knowledge_points="错题重练",
-        questions=len(questions),
+        total_questions=len(questions),
         sections=sections,
         generated_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
     )

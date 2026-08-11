@@ -2,7 +2,7 @@
 
 import sys
 from typing import Optional
-from .database.repository import QuestionRepository, KnowledgePointRepository
+from ..database.repository import QuestionRepository, KnowledgePointRepository
 
 
 def start_review(repos: dict, kp_filter: str = None, limit: int = 50):
