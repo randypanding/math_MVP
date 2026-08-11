@@ -40,7 +40,24 @@ ProcessingLog
 | stem | String | NOT NULL | 题目文本 |
 | answer | String | | 答案（NULL=待确认） |
 | solution | String | | 解题步骤 |
-| common_error | String | | 易错点分析 |
+| common_error | String | | 易错点分析（兼容文案） |
+| error_category | String | | 错误类别：conceptual/semantic/calculation/missing_step/logic/procedural |
+| error_category_label | String | | 错误类别中文名 |
+| pattern_id | String | | 易错模式ID（如 carry_omitted） |
+| pattern_name | String | | 易错模式名（如 进位遗忘） |
+| pattern_level | String | | 层级：computation_error 计算性错误 / misconception 概念性误解 |
+| theme | String | | 主题（arithmetic/fraction/...） |
+| theme_label | String | | 主题中文名 |
+| wrong_rule | String | | 错误规则（学生常见做法） |
+| correct_rule | String | | 正确规则 |
+| wrong_value | String | | 常见错误答案 |
+| error_step | String | | 错误插入点（第几步易错） |
+| steps | String(JSON) | | 逐步解题步骤，含 is_error_point 标记 |
+| wrong_path | String(JSON) | | 学生错误路径步骤 |
+| socratic_hints | String(JSON) | | 苏格拉底式引导性追问（逐级提示） |
+| distractor_mapping | String(JSON) | | 干扰项→误解维度映射 |
+| solution_status | String | | 反馈针对性：targeted/optimal/suboptimal/wrong |
+| enhanced_explanation | Bool | | 难点主题（分数/比例）是否需更详细解析 |
 | difficulty | Integer | 1-5 | 难度等级 |
 | source | String | | 来源（程序生成/卷子文件名） |
 | image_path | String | | 关联图片路径 |
