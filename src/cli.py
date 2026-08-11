@@ -1,4 +1,4 @@
-"""CLI 入口 - 命令行解析"""
+"""CLI 入口 - 命令行解析（扩展版）"""
 
 import argparse
 import sys
@@ -13,18 +13,43 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-  mathgen generate-questions --all              生成全知识点题目
-  mathgen generate-questions --grade 2           生成二年级题目
+  # 生成题目
+  mathgen generate-questions --all
+  mathgen generate-questions --grade 二年级
   mathgen generate-questions --kp "100以内进位加法" -n 50
+
+  # 查询题型
+  mathgen query-types
+  mathgen query-types --grade 一年级
+
+  # 生成练习卷（基础）
   mathgen generate --kp "100以内进位加法" -n 20 --with-answer
-  mathgen generate --grade 2 -n 50 --with-answer --with-error-tip
-  mathgen extract 试卷.doc                        解析单个卷子
-  mathgen batch 试卷文件夹/                      批量解析
-  mathgen review                                 交互式审核
+
+  # 生成练习卷（高级 - 指定题型数量和顺序）
+  mathgen generate --title "期末复习卷" \\
+    --section "口算题:10" \\
+    --section "竖式计算:5" \\
+    --section "解决问题:3" \\
+    --type-order "mental_arithmetic,vertical_calculation,word_problem"
+
+  # 生成练习卷（按年级 + 题型控制）
+  mathgen generate --grade 一年级 --title "每日一练" \\
+    --section "口算题:15" \\
+    --section "填未知数:5"
+
+  # 查询题库
   mathgen query --kp "进位加法" --limit 10
-  mathgen stats                                  统计报告
-  mathgen import-error 错题.png                  导入错题
-  mathgen error-practice -n 20                   错题专项练习
+  mathgen query --type mental_arithmetic --json
+
+  # 统计报告
+  mathgen stats
+
+  # 解析卷子
+  mathgen extract 试卷.doc
+  mathgen batch 试卷文件夹/
+
+  # 审核
+  mathgen review
         """
     )
 
@@ -38,16 +63,27 @@ def create_parser() -> argparse.ArgumentParser:
     gq_parser.add_argument("-n", "--count", type=int, default=50, help="生成题目数量（默认50）")
     gq_parser.add_argument("--types", type=str, help="指定题型（逗号分隔）")
 
+    # === query-types ===
+    qt_parser = subparsers.add_parser("query-types", help="查询可用题型")
+    qt_parser.add_argument("--grade", type=str, help="按年级筛选")
+    qt_parser.add_argument("--kp", type=str, help="按知识点筛选")
+    qt_parser.add_argument("--json", action="store_true", dest="json_output", help="JSON格式输出")
+
     # === generate ===
     gen_parser = subparsers.add_parser("generate", help="生成练习卷PDF")
+    gen_parser.add_argument("--title", type=str, help="练习卷标题/名称")
     gen_parser.add_argument("--kp", type=str, help="知识点（逗号分隔）")
     gen_parser.add_argument("--grade", type=str, help="年级")
-    gen_parser.add_argument("-n", "--count", type=int, default=50, help="题量")
-    gen_parser.add_argument("--types", type=str, help="题型（逗号分隔）")
+    gen_parser.add_argument("-n", "--count", type=int, default=50, help="总题量（与--section互斥）")
+    gen_parser.add_argument("--section", type=str, action="append", metavar="TYPE:COUNT",
+                            help="指定题型和数量（可多次使用，如 --section 口算题:10）")
+    gen_parser.add_argument("--type-order", type=str, help="题型顺序（逗号分隔）")
+    gen_parser.add_argument("--types", type=str, help="筛选题型（逗号分隔）")
+    gen_parser.add_argument("--difficulty", type=int, help="难度(1-5)")
     gen_parser.add_argument("--with-answer", action="store_true", help="包含答案页")
     gen_parser.add_argument("--with-error-tip", action="store_true", help="包含易错提示")
     gen_parser.add_argument("--output", type=str, help="输出PDF路径")
-    gen_parser.add_argument("--title", type=str, help="练习卷标题")
+    gen_parser.add_argument("--random-order", action="store_true", help="题目随机排序")
 
     # === extract ===
     ext_parser = subparsers.add_parser("extract", help="解析单个卷子")
