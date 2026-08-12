@@ -137,6 +137,10 @@ def handle_command(args):
         except KeyboardInterrupt:
             print("\n操作已取消")
             sys.exit(130)
+        except ValueError as e:
+            # 业务性错误（如题库无匹配题目）：给出清晰单条提示，不抛 traceback
+            print(f"错误: {e}", file=sys.stderr)
+            sys.exit(1)
         except Exception as e:
             print(f"错误: {e}", file=sys.stderr)
             import traceback
@@ -190,8 +194,13 @@ def cmd_query_types(args):
     """处理 query-types 命令"""
     repos = get_repos()
 
-    # 从数据库查询实际存在的题型
-    questions = repos["question"].query(review_status="approved", limit=100000)
+    # 从数据库查询实际存在的题型（支持按年级过滤）
+    query_kwargs = {"review_status": "approved", "limit": 100000}
+    if getattr(args, "grade", None):
+        query_kwargs["grade"] = args.grade
+    if getattr(args, "kp", None):
+        query_kwargs["knowledge_point_id"] = args.kp
+    questions = repos["question"].query(**query_kwargs)
     type_counts = {}
     for q in questions:
         type_counts[q.question_type] = type_counts.get(q.question_type, 0) + 1

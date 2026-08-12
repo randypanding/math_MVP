@@ -58,11 +58,22 @@ def generate_for_knowledge_point(kp: dict, count: int, repo: QuestionRepository)
 
     # 生成带易错模式的题目
     questions = []
-    difficulty_range = kp.get('difficulty_range', [1, 3])
+    difficulty_range = kp.get('difficulty', [1, 3])
     for _ in range(count):
         difficulty = random.randint(difficulty_range[0], difficulty_range[1])
-        q = generate_question_with_errors(kp['id'], kp['name'], difficulty)
+        # 传入完整知识点字典（含 types/grade/semester），驱动类型选择与年级感知模板
+        q = generate_question_with_errors(kp['id'], kp['name'], difficulty, kp=kp)
         questions.append(q)
+
+    # 去重：同一知识点内按题干哈希去重，避免一份卷子出现重复题
+    seen = set()
+    unique = []
+    for q in questions:
+        key = q.get("stem", "").strip()
+        if key and key not in seen:
+            seen.add(key)
+            unique.append(q)
+    questions = unique
 
     if questions:
         repo.create_batch(questions)

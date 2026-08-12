@@ -219,28 +219,29 @@ class PaperGenerator:
 
         order = type_order if type_order else default_type_order
 
+        # 题区中文名（不带编号，编号在下方按实际出现顺序生成）
         type_names = {
-            "mental_arithmetic": "一、口算题",
-            "vertical_calculation": "二、竖式计算",
-            "step_calculation": "三、脱式计算",
-            "fill_unknown": "四、填未知数",
-            "number_composition": "五、数的组成",
-            "number_read_write": "六、数的读写",
-            "compare_size": "七、比大小",
-            "pattern_sequence": "八、规律填数",
-            "verification": "九、验算题",
-            "estimation": "十、估算题",
-            "simplified_calculation": "十一、简便计算",
-            "composite_expression": "十二、列综合算式",
-            "solve_equation": "十三、解方程",
-            "percentage": "十四、百分数",
-            "shape_counting": "十五、图形计数",
-            "perimeter_area": "十六、周长面积",
-            "unit_conversion": "十七、单位换算",
-            "angle_measurement": "十八、角的度量",
-            "chart_analysis": "十九、统计图表",
-            "word_problem": "二十、解决问题",
-            "math_puzzle": "二十一、数学广角",
+            "mental_arithmetic": "口算题",
+            "vertical_calculation": "竖式计算",
+            "step_calculation": "脱式计算",
+            "fill_unknown": "填未知数",
+            "number_composition": "数的组成",
+            "number_read_write": "数的读写",
+            "compare_size": "比大小",
+            "pattern_sequence": "规律填数",
+            "verification": "验算题",
+            "estimation": "估算题",
+            "simplified_calculation": "简便计算",
+            "composite_expression": "列综合算式",
+            "solve_equation": "解方程",
+            "percentage": "百分数",
+            "shape_counting": "图形计数",
+            "perimeter_area": "周长面积",
+            "unit_conversion": "单位换算",
+            "angle_measurement": "角的度量",
+            "chart_analysis": "统计图表",
+            "word_problem": "解决问题",
+            "math_puzzle": "数学广角",
             "oral_counting": "数一数",
         }
 
@@ -250,32 +251,30 @@ class PaperGenerator:
                 groups[q.question_type] = []
             groups[q.question_type].append(q)
 
+        # 中文序号（一、二、三……）
+        cn_nums = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十",
+                   "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八",
+                   "十九", "二十", "二十一", "二十二"]
+
+        ordered_types = []
+        for t in order:
+            if t in groups:
+                ordered_types.append(t)
+        # 添加未在顺序表中的题型
+        ordered_types.extend(t for t in groups if t not in order)
+
         sections = []
         question_number = 1
 
-        # 按指定顺序添加
-        for t in order:
-            if t in groups:
-                qs = groups[t]
-                for q in qs:
-                    q.number = question_number
-                    question_number += 1
-                sections.append({
-                    "type": t,
-                    "title": type_names.get(t, t),
-                    "questions": qs
-                })
-
-        # 添加未在顺序表中的题型
-        for t, qs in groups.items():
-            if t not in order:
-                for q in qs:
-                    q.number = question_number
-                    question_number += 1
-                sections.append({
-                    "type": t,
-                    "title": type_names.get(t, t),
-                    "questions": qs
-                })
+        for idx, t in enumerate(ordered_types):
+            qs = groups[t]
+            for q in qs:
+                q.number = question_number
+                question_number += 1
+            sections.append({
+                "type": t,
+                "title": f"{cn_nums[idx] if idx < len(cn_nums) else idx + 1}、{type_names.get(t, t)}",
+                "questions": qs
+            })
 
         return sections

@@ -2,8 +2,12 @@
 
 import os
 import math
+import logging
 from datetime import datetime
 from fpdf import FPDF
+
+# 抑制 fontTools 子集化对 TTC 字体的无害警告（不影响渲染结果）
+logging.getLogger("fontTools.subset").setLevel(logging.ERROR)
 
 
 class PDFRenderer:
@@ -13,8 +17,16 @@ class PDFRenderer:
         self.font_path = self._find_chinese_font()
 
     def _find_chinese_font(self) -> str:
-        font_dirs = ["C:/Windows/Fonts", "C:/WINNT/Fonts"]
-        chinese_fonts = ["simsun.ttc", "msyh.ttc", "simhei.ttf", "simkai.ttf"]
+        # 常见系统字体路径（Windows + Linux），优先取可用的
+        font_dirs = ["C:/Windows/Fonts", "C:/WINNT/Fonts",
+                     "/usr/share/fonts/truetype/noto",
+                     "/usr/share/fonts/opentype/noto",
+                     "/usr/share/fonts/truetype/wqy",
+                     "/System/Library/Fonts"]
+        chinese_fonts = ["simsun.ttc", "msyh.ttc", "simhei.ttf", "simkai.ttf",
+                         "NotoSansCJK-Regular.ttc", "NotoSansCJK-Regular.ttf",
+                         "wqy-zenhei.ttc", "wqy-microhei.ttc",
+                         "PingFang.ttc", "STHeiti Light.ttc"]
         for font_dir in font_dirs:
             for font_name in chinese_fonts:
                 font_path = os.path.join(font_dir, font_name)
