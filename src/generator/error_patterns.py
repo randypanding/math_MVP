@@ -1316,19 +1316,88 @@ def _tpl_math_puzzle(grade: Optional[str] = None, semester: Optional[str] = None
 
 
 def _tpl_fill_unknown(grade: Optional[str] = None, semester: Optional[str] = None) -> Dict[str, Any]:
-    a = random.randint(2, 20)
-    correct = random.randint(2, 20)
-    b = a + correct
-    stem = f"{a} + (  ) = {b}"
-    wrong = b - correct + 1
-    if wrong == correct:
+    # 按年级分级，避免各年级共用同一套极简“a + ( ) = b”（高年级难度偏低）
+    if grade in ("一年级", "二年级"):
+        # 20 以内加减法填空
+        a = random.randint(2, 20)
+        correct = random.randint(2, 20)
+        b = a + correct
+        stem = f"{a} + (  ) = {b}"
+        wrong = b - correct + 1
+        if wrong == correct:
+            wrong = correct + 1
+        steps = [
+            {"step": f"求未知加数：{b} - {a} = {correct}", "is_error_point": False},
+        ]
+        solution = f"{b} - {a} = {correct}"
+    elif grade in ("三年级", "四年级"):
+        # 百/千以内加减、带乘除逆运算
+        if random.random() < 0.5:
+            a = random.randint(100, 900)
+            correct = random.randint(100, 900)
+            b = a + correct
+            stem = f"{a} + (  ) = {b}"
+            wrong = b - correct + 1
+            if wrong == correct:
+                wrong = correct + 1
+            steps = [
+                {"step": f"求未知加数：{b} - {a} = {correct}", "is_error_point": False},
+            ]
+            solution = f"{b} - {a} = {correct}"
+        else:
+            a = random.randint(2, 9)
+            correct = random.randint(2, 9)
+            b = a * correct
+            stem = f"{a} × (  ) = {b}"
+            wrong = b - a + 1
+            if wrong == correct:
+                wrong = correct + 1
+            steps = [
+                {"step": f"求未知因数：{b} ÷ {a} = {correct}", "is_error_point": False},
+            ]
+            solution = f"{b} ÷ {a} = {correct}"
+    elif grade == "五年级":
+        # 小数 / 简易方程型逆运算
+        if random.random() < 0.5:
+            a = round(random.uniform(1.0, 9.0), 1)
+            correct = round(random.uniform(1.0, 9.0), 1)
+            b = round(a + correct, 1)
+            stem = f"x + {a} = {b}"
+            wrong = round(b - a + 1, 1)
+            if wrong == correct:
+                wrong = round(correct + 1, 1)
+            steps = [
+                {"step": f"等式两边同时减 {a}：x = {b} - {a} = {correct}", "is_error_point": False},
+            ]
+            solution = f"x = {b} - {a} = {correct}"
+        else:
+            a = random.randint(2, 9)
+            correct = random.randint(2, 9)
+            b = a * correct
+            stem = f"{a} × (  ) = {b}"
+            wrong = b - a + 1
+            if wrong == correct:
+                wrong = correct + 1
+            steps = [
+                {"step": f"求未知因数：{b} ÷ {a} = {correct}", "is_error_point": False},
+            ]
+            solution = f"{b} ÷ {a} = {correct}"
+    else:
+        # 六年级：含百分数 / 比例的逆运算
+        base = random.randint(20, 200)
+        p = random.choice([10, 20, 25, 50])
+        correct = base * p // 100
+        stem = f"(  )% 的 {base} = {correct}"
         wrong = correct + 1
-    steps = [
-        {"step": f"求未知加数：{b} - {a} = {correct}", "is_error_point": False},
-    ]
+        if wrong == correct:
+            wrong = correct + 10
+        steps = [
+            {"step": f"{base} 的 {p}% = {base} × {p} ÷ 100 = {correct}", "is_error_point": False},
+        ]
+        solution = f"{base} × {p}% = {correct}"
     return {
         "stem": stem, "answer": str(correct),
-        "solution": f"{b} - {a} = {correct}",
+        "solution": solution,
         "wrong_value": wrong, "steps": steps,
     }
 
@@ -1407,8 +1476,11 @@ TEMPLATE_TYPES = {
 # 每个模板允许出现的年级白名单（None=不限制），杜绝跨年级污染
 TEMPLATE_GRADE = {
     "fraction_ratio": ["三年级", "四年级", "五年级", "六年级"],
-    "frac_div": ["三年级", "四年级", "五年级", "六年级"],
-    "frac_add": ["三年级", "四年级", "五年级", "六年级"],
+    # 分数除法（不颠倒直接乘的误解）属六年级上册；五年级下册仅学分数加减，不学除法
+    "frac_div": ["六年级"],
+    # 当前 frac_add 恒为异分母通分（五年级下册「分数的加法和减法」），三年级/四年级
+    # 只要求同分母，故不开放；三年级如需分数加减应使用同分母专项模板
+    "frac_add": ["五年级", "六年级"],
     "dec_add": ["三年级", "四年级", "五年级", "六年级"],
     "dec_sub": ["三年级", "四年级", "五年级", "六年级"],
     "dec_mul": ["四年级", "五年级", "六年级"],
@@ -1427,6 +1499,9 @@ TEMPLATE_GRADE = {
     "angle_measurement": ["二年级", "三年级", "四年级"],
     "composite_expression": ["三年级", "四年级", "五年级", "六年级"],
     "vertical_mul": ["三年级", "四年级", "五年级", "六年级"],
+    # 表内乘法（口算）与有余数除法均自二年级起学习，一年级不超纲
+    "mul": ["二年级", "三年级", "四年级", "五年级", "六年级"],
+    "div_remainder": ["二年级", "三年级", "四年级", "五年级", "六年级"],
     "oral_counting": ["一年级"],
     # 解决问题（word_problem）类模板：倍数关系题含乘法语义，限定高年级；
     # 关键词/单位题不超纲，各年级均可用

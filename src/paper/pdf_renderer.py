@@ -1,6 +1,7 @@
 """PDF 渲染器 - 仿照示例卷子排版"""
 
 import os
+import re
 import math
 import logging
 from datetime import datetime
@@ -33,6 +34,15 @@ class PDFRenderer:
                 if os.path.exists(font_path):
                     return font_path
         return ""
+
+    @staticmethod
+    def _clean_text(s: str) -> str:
+        """渲染前清理文本：展开下划线占位符、去除会被字体子集报缺词形的控制字符。
+
+        综合算式等题干内嵌字面换行符（\\n），SimSun 子集不含 \\n 字形，直接传给
+        fpdf2 会触发 "missing the following glyphs: ' ' (\\n)" 警告。统一替换为空格。
+        """
+        return str(s).replace("&#95;&#95;", "______").replace("\n", " ")
 
     def render_paper(self, title: str, sections: list, grade: str = None,
                      knowledge_points: str = "", with_answer: bool = True,
@@ -115,7 +125,7 @@ class PDFRenderer:
         """口算题：每行3题，紧凑排列"""
         pdf.set_font(font_name, "", 10)
         for i, q in enumerate(questions):
-            stem = q.stem.replace("&#95;&#95;", "______")
+            stem = self._clean_text(q.stem)
             text = f"  {q.number}. {stem}"
             pdf.cell(60, 6, text, ln=False)
             if (i + 1) % 3 == 0:
@@ -127,7 +137,7 @@ class PDFRenderer:
         """竖式计算：每行2题，留空位"""
         pdf.set_font(font_name, "", 10)
         for i, q in enumerate(questions):
-            stem = q.stem.replace("&#95;&#95;", "______")
+            stem = self._clean_text(q.stem)
             text = f"  {q.number}. {stem}"
             pdf.cell(80, 6, text, ln=False)
             pdf.ln(4)
@@ -141,7 +151,7 @@ class PDFRenderer:
         """脱式计算：每行2题，留空位"""
         pdf.set_font(font_name, "", 10)
         for i, q in enumerate(questions):
-            stem = q.stem.replace("&#95;&#95;", "______")
+            stem = self._clean_text(q.stem)
             text = f"  {q.number}. {stem}"
             pdf.cell(80, 6, text, ln=False)
             pdf.ln(4)
@@ -155,7 +165,7 @@ class PDFRenderer:
         """填未知数：每行3题"""
         pdf.set_font(font_name, "", 10)
         for i, q in enumerate(questions):
-            stem = q.stem.replace("&#95;&#95;", "______")
+            stem = self._clean_text(q.stem)
             text = f"  {q.number}. {stem}"
             pdf.cell(60, 6, text, ln=False)
             if (i + 1) % 3 == 0:
@@ -166,8 +176,15 @@ class PDFRenderer:
     def _render_compare_size(self, pdf, font_name, questions):
         """比大小：每行3题"""
         pdf.set_font(font_name, "", 10)
+        if questions:
+            # 提取题干里统一印出的指令（如“在○里填上…），题区开头只打印一次，
+            # 避免每题重复拼接指令、且 3 题之间无分隔。
+            m = re.match(r"^(在○里填上.*?[：:])", questions[0].stem)
+            if m:
+                pdf.cell(0, 6, self._clean_text(m.group(1)), ln=True)
+                pdf.ln(1)
         for i, q in enumerate(questions):
-            stem = q.stem.replace("&#95;&#95;", "______")
+            stem = re.sub(r"^在○里填上.*?[：:]", "", self._clean_text(q.stem))
             text = f"  {q.number}. {stem}"
             pdf.cell(60, 6, text, ln=False)
             if (i + 1) % 3 == 0:
@@ -179,7 +196,7 @@ class PDFRenderer:
         """解决问题：每行1题，留大空位"""
         pdf.set_font(font_name, "", 10)
         for q in questions:
-            stem = q.stem.replace("&#95;&#95;", "______")
+            stem = self._clean_text(q.stem)
             pdf.multi_cell(0, 6, f"  {q.number}. {stem}")
             pdf.ln(2)
             pdf.ln(18)
@@ -188,7 +205,7 @@ class PDFRenderer:
         """默认排版：每行2题"""
         pdf.set_font(font_name, "", 10)
         for i, q in enumerate(questions):
-            stem = q.stem.replace("&#95;&#95;", "______")
+            stem = self._clean_text(q.stem)
             text = f"  {q.number}. {stem}"
             pdf.cell(80, 6, text, ln=False)
             pdf.ln(4)
@@ -220,14 +237,14 @@ class PDFRenderer:
                 if pdf.get_y() > 270:
                     pdf.add_page()
                     pdf.set_font(font_name, "", 9)
-                answer = q.answer if q.answer else "略"
+                answer = self._clean_text(q.answer) if q.answer else "略"
                 pdf.cell(0, 5, f"  {q.number}. {answer}")
                 pdf.ln(5)
 
                 if with_error_tip and q.common_error and q.common_error.strip():
                     pdf.set_font(font_name, "", 8)
                     pdf.set_text_color(180, 0, 0)
-                    pdf.cell(0, 4, f"      易错点：{q.common_error}")
+                    pdf.cell(0, 4, f"      易错点：{self._clean_text(q.common_error)}")
                     pdf.ln(4)
                     pdf.set_text_color(0, 0, 0)
                     pdf.set_font(font_name, "", 9)
