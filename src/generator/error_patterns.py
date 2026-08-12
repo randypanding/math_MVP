@@ -799,6 +799,44 @@ def _tpl_dec_mul(grade: Optional[str] = None, semester: Optional[str] = None) ->
     }
 
 
+def _tpl_dec_sub(grade: Optional[str] = None, semester: Optional[str] = None) -> Dict[str, Any]:
+    a = round(random.uniform(2.0, 9.9), 2)
+    b = round(random.uniform(1.0, a - 0.01), 2)
+    correct = round(a - b, 2)
+    wrong = round(a + b, 2)  # 误把减当加
+    if wrong == correct:
+        wrong = round(a - b + 0.01, 2)
+    stem = f"{a} - {b} = ___"
+    steps = [
+        {"step": f"小数点对齐后相减：{a} - {b}", "is_error_point": False},
+        {"step": f"结果为 {correct}", "is_error_point": False},
+    ]
+    return {
+        "stem": stem, "answer": str(correct),
+        "solution": f"{a} - {b} = {correct}",
+        "wrong_value": str(round(wrong, 2)), "steps": steps,
+    }
+
+
+def _tpl_dec_div(grade: Optional[str] = None, semester: Optional[str] = None) -> Dict[str, Any]:
+    a = round(random.uniform(1.0, 9.9), 2)
+    b = random.choice([10, 100])
+    correct = round(a / b, 2)
+    wrong = round(a * b, 2)  # 误把除当乘（小数点方向反了）
+    if wrong == correct:
+        wrong = round(a / b + 0.01, 2)
+    stem = f"{a} ÷ {b} = ___"
+    steps = [
+        {"step": f"÷{b} 小数点向左移动 {len(str(b)) - 1} 位", "is_error_point": True},
+        {"step": f"结果为 {correct}", "is_error_point": False},
+    ]
+    return {
+        "stem": stem, "answer": str(correct),
+        "solution": f"{a} ÷ {b} = {correct}",
+        "wrong_value": str(round(wrong, 2)), "steps": steps,
+    }
+
+
 def _tpl_rect_perimeter_area(grade: Optional[str] = None, semester: Optional[str] = None) -> Dict[str, Any]:
     length = random.randint(5, 20)
     width = random.randint(3, min(15, length))
@@ -994,6 +1032,25 @@ def _tpl_word_problem_keyword(grade: Optional[str] = None, semester: Optional[st
     }
 
 
+def _tpl_word_problem_unit(grade: Optional[str] = None, semester: Optional[str] = None) -> Dict[str, Any]:
+    """单位相关的加减应用题（不涉及乘法/倍数），适合低年级；易错点为漏写单位。"""
+    a = random.randint(5, 20)
+    b = random.randint(1, a - 1)
+    unit = random.choice(["个", "块", "本", "支", "朵"])
+    correct = a - b
+    wrong = a + b  # 误把减当加
+    stem = f"小明有{a}{unit}笔，送给小红{b}{unit}，还剩多少{unit}？"
+    steps = [
+        {"step": f"从总数{a}里减去送走的{b}，还剩 {a} - {b}", "is_error_point": False},
+        {"step": f"结果记得写单位：{correct}{unit}", "is_error_point": True},
+    ]
+    return {
+        "stem": stem, "answer": f"{correct}{unit}",
+        "solution": f"{a} - {b} = {correct}{unit}",
+        "wrong_value": f"{wrong}{unit}", "steps": steps,
+    }
+
+
 # ============================================================
 # 新增题型模板（补齐 22 种声明题型）
 # ============================================================
@@ -1134,7 +1191,8 @@ def _tpl_chart_analysis(grade: Optional[str] = None, semester: Optional[str] = N
 
 def _tpl_angle_measurement(grade: Optional[str] = None, semester: Optional[str] = None) -> Dict[str, Any]:
     a = random.randint(20, 80)
-    b = random.randint(20, 90 - a if a < 90 else 10)
+    # 限制两角和不超过 90°（锐角），避免 b 上界小于下界导致空区间崩溃
+    b = random.randint(20, max(20, 90 - a))
     correct = a + b
     wrong = abs(a - b)  # 误用减法
     stem = f"一个角是{a}°，另一个角是{b}°，两个角合起来是（___）°。"
@@ -1288,14 +1346,14 @@ TEMPLATES = {
     "frac_div": _tpl_frac_div,
     "frac_add": _tpl_frac_add,
     "dec_add": _tpl_dec_add,
-    "dec_sub": _tpl_dec_add,
+    "dec_sub": _tpl_dec_sub,
     "dec_mul": _tpl_dec_mul,
-    "dec_div": _tpl_dec_mul,
+    "dec_div": _tpl_dec_div,
     "rect_perimeter_area": _tpl_rect_perimeter_area,
     "square_perimeter_area": _tpl_rect_perimeter_area,
     "half_circle": _tpl_half_circle,
     "unit_convert": _tpl_unit_convert,
-    "word_problem_unit": _tpl_word_problem_relation,
+    "word_problem_unit": _tpl_word_problem_unit,
     "ratio_area": _tpl_ratio_area,
     "proportion_judge": _tpl_proportion_judge,
     "word_problem_relation": _tpl_word_problem_relation,
@@ -1370,6 +1428,11 @@ TEMPLATE_GRADE = {
     "composite_expression": ["三年级", "四年级", "五年级", "六年级"],
     "vertical_mul": ["三年级", "四年级", "五年级", "六年级"],
     "oral_counting": ["一年级"],
+    # 解决问题（word_problem）类模板：倍数关系题含乘法语义，限定高年级；
+    # 关键词/单位题不超纲，各年级均可用
+    "word_problem_relation": ["三年级", "四年级", "五年级", "六年级"],
+    "word_problem_keyword": ["一年级", "二年级", "三年级", "四年级", "五年级", "六年级"],
+    "word_problem_unit": ["一年级", "二年级", "三年级", "四年级", "五年级", "六年级"],
 }
 
 

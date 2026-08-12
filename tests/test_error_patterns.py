@@ -11,6 +11,12 @@ from src.generator.error_patterns import (
     PATTERNS,
     TEMPLATES,
     CATEGORY_LABELS,
+    TEMPLATE_GRADE,
+    _tpl_angle_measurement,
+    _tpl_dec_sub,
+    _tpl_dec_div,
+    _tpl_word_problem_relation,
+    _tpl_word_problem_unit,
 )
 
 KP_CASES = [
@@ -100,9 +106,56 @@ def test_example_output():
     print(f"  干扰项映射: {json.loads(q['distractor_mapping'])}")
 
 
+def test_angle_template_no_crash():
+    """Issue #1：_tpl_angle_measurement 在大量随机下不应抛空区间异常"""
+    print("== 5. 角度模板空区间回归 ==")
+    for _ in range(500):
+        t = _tpl_angle_measurement()
+        assert t["stem"] and t["answer"], "角度模板出生空结果"
+    print("  500 次随机抽样均未崩溃 ✅")
+
+
+def test_dec_sub_div_templates():
+    """Issue #2：dec_sub/dec_div 应产出减法/除法表达式，而非加法/乘法"""
+    print("== 6. 小数减/除模板语义 ==")
+    for _ in range(50):
+        sub = _tpl_dec_sub()
+        assert "-" in sub["stem"], f"dec_sub 应为减法: {sub['stem']}"
+        assert "÷" in sub["stem"] or "+" not in sub["stem"], f"dec_sub 出现加法: {sub['stem']}"
+        div = _tpl_dec_div()
+        assert "÷" in div["stem"], f"dec_div 应为除法: {div['stem']}"
+        assert "×" not in div["stem"], f"dec_div 出现乘法: {div['stem']}"
+    # 分发表映射正确
+    assert TEMPLATES["dec_sub"] is _tpl_dec_sub, "dec_sub 未映射到正确函数"
+    assert TEMPLATES["dec_div"] is _tpl_dec_div, "dec_div 未映射到正确函数"
+    print("  小数减/除模板语义与分发表映射正确 ✅")
+
+
+def test_word_problem_grade_whitelist():
+    """Issue #3：倍数关系模板不应出现在低年级 word_problem 题中"""
+    print("== 7. 解决问题模板年级白名单 ==")
+    # 倍数关系题限定三年级及以上
+    assert TEMPLATE_GRADE["word_problem_relation"] == \
+        ["三年级", "四年级", "五年级", "六年级"], "word_problem_relation 白名单错误"
+    assert "一年级" not in TEMPLATE_GRADE["word_problem_relation"]
+    assert "二年级" not in TEMPLATE_GRADE["word_problem_relation"]
+    # 低年级 word_problem 不应生成倍数题
+    for g in ("一年级", "二年级"):
+        for _ in range(30):
+            q = generate_question_with_errors(
+                "G1U01KP01", "比多少", 2,
+                kp={"types": ["word_problem"], "grade": g, "semester": "上册"},
+            )
+            assert "倍" not in q["stem"], f"{g} 出现倍数内容: {q['stem']}"
+    print("  低年级解决题不再出现倍数内容 ✅")
+
+
 if __name__ == "__main__":
     test_pattern_library()
     test_hierarchy()
     test_generation()
     test_example_output()
+    test_angle_template_no_crash()
+    test_dec_sub_div_templates()
+    test_word_problem_grade_whitelist()
     print("\n全部自测通过 ✅")

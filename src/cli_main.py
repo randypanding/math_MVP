@@ -160,33 +160,34 @@ def cmd_generate_questions(args):
 
     if args.all:
         kps = load_knowledge_points()
-        total = 0
-        for kp in kps:
-            count = generate_for_knowledge_point(kp, args.count, repos["question"])
-            total += count
-            print(f"  {kp['name']}: {count} 题")
-        print(f"\n共生成 {total} 道题目")
     elif args.grade:
         kps = load_knowledge_points(grade=args.grade)
-        total = 0
-        for kp in kps:
-            count = generate_for_knowledge_point(kp, args.count, repos["question"])
-            total += count
-            print(f"  {kp['name']}: {count} 题")
-        print(f"\n共生成 {total} 道题目")
     elif args.kp:
         kps = load_knowledge_points(name=args.kp)
         if not kps:
             print(f"未找到知识点: {args.kp}")
             sys.exit(1)
-        total = 0
-        for kp in kps:
+    else:
+        print("请指定 --all、--grade 或 --kp")
+        sys.exit(1)
+
+    total = 0
+    failed = []
+    for kp in kps:
+        try:
             count = generate_for_knowledge_point(kp, args.count, repos["question"])
             total += count
             print(f"  {kp['name']}: {count} 题")
-        print(f"\n共生成 {total} 道题目")
-    else:
-        print("请指定 --all、--grade 或 --kp")
+        except Exception as e:
+            # 单个知识点出错不中断整批，记录后继续
+            failed.append((kp['name'], str(e)))
+            print(f"  {kp['name']}: 生成失败 - {e}")
+
+    print(f"\n共生成 {total} 道题目")
+    if failed:
+        print(f"警告: {len(failed)} 个知识点生成失败:")
+        for name, err in failed:
+            print(f"  - {name}: {err}")
         sys.exit(1)
 
 
